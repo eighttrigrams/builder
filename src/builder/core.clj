@@ -82,12 +82,23 @@
 (defn log-to-file [msg]
   (spit "hooks.log" (str msg "\n") :append true))
 
+(defn builder-root []
+  (-> (io/resource "pipelines")
+      .toURI
+      java.io.File.
+      .getParentFile
+      .getParentFile
+      .getAbsolutePath))
+
 (defn run-claude [prompt]
   (println "Running Claude...")
-  (log-to-file "### Sending the following prompt to Claude:")
-  (log-to-file prompt)
-  (log-to-file "### End of prompt\n")
-  (shell "claude" "-p" prompt "--allowedTools" "Write"))
+  (let [plugin-dir (builder-root)]
+    (println "Plugin dir:" plugin-dir)
+    (log-to-file (str "### Plugin dir: " plugin-dir))
+    (log-to-file "### Sending the following prompt to Claude:")
+    (log-to-file prompt)
+    (log-to-file "### End of prompt\n")
+    (shell "claude" "-p" prompt "--allowedTools" "Write" "--plugin-dir" plugin-dir)))
 
 (defn start-app []
   (println "Starting app...")
