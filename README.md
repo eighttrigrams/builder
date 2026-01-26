@@ -11,8 +11,10 @@ bbin install .
 Run a pipeline:
 
 ```bash
-builder <pipeline-name> <commit-message-prefix>
+builder <pipeline-name> <commit-message-prefix> [port]
 ```
+
+Pipelines with `:standard-fullstack? true` require a port and a Makefile with `start`, `stop`, and `test` targets.
 
 Generate mermaid diagram of a pipeline:
 
@@ -22,7 +24,7 @@ builder-mermaid <pipeline-name> [output-file]
 
 ### Bundled pipelines
 
-- `tracker-build` - Build pipeline for the tracker project
+- `fullstack-exploratory-first-with-boyscout-help` - Exploratory-first workflow with code review and boyscout refactoring
 
 # Rationale
 
