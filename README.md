@@ -2,13 +2,11 @@
 
 A pipeline runner for Claude-based build automation.
 
-## Installation
+## Getting started
 
 ```bash
 bbin install .
 ```
-
-## Usage
 
 Run a pipeline:
 
@@ -22,6 +20,10 @@ Generate mermaid diagram of a pipeline:
 builder-mermaid <pipeline-name> [output-file]
 ```
 
-## Bundled pipelines
+### Bundled pipelines
 
 - `tracker-build` - Build pipeline for the tracker project
+
+# Rationale
+
+- Never do many things at once, constantly refine.
