@@ -7,10 +7,24 @@
 
 (def ^:dynamic *config* nil)
 
+(defn validate-pipeline [config]
+  (let [produced (atom (set (:seed-artifacts config)))]
+    (doseq [{:keys [requires produces]} (:stages config)]
+      (when requires
+        (doseq [req requires]
+          (when-not (contains? @produced req)
+            (throw (ex-info "Required document not produced by earlier stage"
+                            {:required req :produced @produced})))))
+      (when produces
+        (swap! produced into produces)))
+    true))
+
 (defn load-config! [pipeline-name]
   (let [resource-name (str "pipelines/" pipeline-name ".pipeline.edn")]
     (if-let [resource (io/resource resource-name)]
-      (alter-var-root #'*config* (constantly (edn/read-string (slurp resource))))
+      (let [config (edn/read-string (slurp resource))]
+        (validate-pipeline config)
+        (alter-var-root #'*config* (constantly config)))
       (do
         (println "Error: Unknown pipeline:" pipeline-name)
         (System/exit 1)))))

@@ -1,6 +1,8 @@
 {:standard-fullstack? true
  :docs-dir "build-next-feature"
 
+ :seed-artifacts [:next-feature]
+
  :documents
  {:next-feature                    {:file "NEXT_FEATURE.md"}
   :exploratory-implementers-complaints           {:file "EXPLORATORY_IMPLEMENTERS_COMPLAINTS.md"}

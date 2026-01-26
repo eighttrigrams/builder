@@ -1,4 +1,11 @@
 {:paths ["src" "resources"]
  :deps {}
+ :tasks {test {:extra-paths ["test"]
+               :requires ([clojure.test :as t]
+                          [builder.core-test])
+               :task (let [result (t/run-tests 'builder.core-test)]
+                       (System/exit (if (and (zero? (:fail result))
+                                             (zero? (:error result)))
+                                      0 1)))}}
  :bbin/bin {builder {:main-opts ["-m" "builder.core"]}
             builder-mermaid {:main-opts ["-m" "builder.mermaid"]}}}
