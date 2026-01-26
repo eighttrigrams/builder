@@ -73,12 +73,28 @@
           (println "Error: Expected output" path "not found or empty.")
           (System/exit 1))))))
 
-(defn build-prompt [{:keys [requires prompt]} ctx]
+(defn strip-frontmatter [content]
+  (if (str/starts-with? content "---")
+    (let [end-idx (str/index-of content "---" 3)]
+      (if end-idx
+        (str/trim (subs content (+ end-idx 3)))
+        content))
+    content))
+
+(defn load-skill [skill-path]
+  (when skill-path
+    (if-let [resource (io/resource skill-path)]
+      (strip-frontmatter (slurp resource))
+      (throw (ex-info "Skill file not found" {:path skill-path})))))
+
+(defn build-prompt [{:keys [requires prompt skill]} ctx]
   (when prompt
     (let [file-refs (when (seq requires)
                       (str (str/join " " (map #(str "@" (doc-path %)) requires))
-                           "\n\n"))]
-      (interpolate (str file-refs prompt) ctx))))
+                           "\n\n"))
+          skill-content (when skill
+                          (str (load-skill skill) "\n\n"))]
+      (interpolate (str skill-content file-refs prompt) ctx))))
 
 (defn run-tests []
   (println "Running tests...")

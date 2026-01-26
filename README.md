@@ -26,6 +26,12 @@ builder-mermaid <pipeline-name> [output-file]
 
 - `fullstack-exploratory-first-with-boyscout-help` - Exploratory-first workflow with code review and boyscout refactoring
 
+## Testing
+
+```bash
+bb test
+```
+
 # Rationale
 
 - Never do many things at once, constantly refine.

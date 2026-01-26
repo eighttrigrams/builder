@@ -76,15 +76,28 @@
   
   Write your findings to {{boyscout-observations}}."}
 
-  {:id :code-review
+  {:id :architecture-review
    :requires-commit? true
-   :requires [:exploratory-implementers-complaints :exploratory-justification :boyscout-observations]
-   :produces [:pr-architecture-review :pr-data-consistency-review :pr-security-review]
-   :prompt "Start three code reviewer subagents, to look at the current diff against master.
+   :requires [:exploratory-implementers-complaints :boyscout-observations]
+   :produces [:pr-architecture-review]
+   :skill "skills/architecture-review/SKILL.md"
+   :prompt "Review the current diff against master (`git diff master...HEAD`).
+Write findings to {{pr-architecture-review}}.
+You don't need to mention anything already in {{boyscout-observations}} or {{exploratory-implementers-complaints}}."}
 
-1. Does an architecture review; results go to {{pr-architecture-review}} (you don't need to mention again anything already mentioned in {{boyscout-observations}} or {{exploratory-implementers-complaints}})
-2. Does an data consistency review; results go to {{pr-data-consistency-review}}
-3. Does an security review; results go to {{pr-security-review}}"} 
+  {:id :data-consistency-review
+   :requires-commit? true
+   :produces [:pr-data-consistency-review]
+   :skill "skills/data-consistency-review/SKILL.md"
+   :prompt "Review the current diff against master (`git diff master...HEAD`).
+Write findings to {{pr-data-consistency-review}}."}
+
+  {:id :security-review
+   :requires-commit? true
+   :produces [:pr-security-review]
+   :skill "skills/security-review/SKILL.md"
+   :prompt "Review the current diff against master (`git diff master...HEAD`).
+Write findings to {{pr-security-review}}."} 
 
   {:id :planning
    :requires [:exploratory-implementers-complaints
