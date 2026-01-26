@@ -1,0 +1,275 @@
+(ns builder.core
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
+            [clojure.java.io :as io]
+            [babashka.process :refer [shell process]]
+            [babashka.fs :as fs]))
+
+(def ^:dynamic *config* nil)
+
+(defn load-config! [pipeline-name]
+  (let [resource-name (str "pipelines/" pipeline-name ".edn")]
+    (if-let [resource (io/resource resource-name)]
+      (alter-var-root #'*config* (constantly (edn/read-string (slurp resource))))
+      (do
+        (println "Error: Unknown pipeline:" pipeline-name)
+        (System/exit 1)))))
+
+(defn docs-dir [] (:docs-dir *config*))
+(defn documents [] (:documents *config*))
+
+(defn doc-path [doc-key]
+  (str (docs-dir) "/" (:file (get (documents) doc-key))))
+
+(defn doc-allow-single-line? [doc-key]
+  (:allow-single-line? (get (documents) doc-key)))
+
+(defn interpolate [template ctx]
+  (reduce-kv
+   (fn [s k v]
+     (str/replace s (str "{{" (name k) "}}") v))
+   template
+   (merge ctx
+          (into {} (map (fn [[k _]] [k (doc-path k)]) (documents))))))
+
+(defn file-valid?
+  ([path] (file-valid? path false))
+  ([path allow-single-line?]
+   (and (fs/exists? path)
+        (let [lines (count (str/split-lines (slurp path)))]
+          (if allow-single-line?
+            (>= lines 1)
+            (> lines 1))))))
+
+(defn check-requires [{:keys [requires]}]
+  (when requires
+    (doseq [doc-key requires]
+      (let [path (doc-path doc-key)
+            allow-single? (doc-allow-single-line? doc-key)]
+        (when-not (file-valid? path allow-single?)
+          (println "Error: Required document" path "not found or empty.")
+          (System/exit 1))))))
+
+(defn check-produces [{:keys [produces]}]
+  (when produces
+    (doseq [doc-key produces]
+      (let [path (doc-path doc-key)
+            allow-single? (doc-allow-single-line? doc-key)]
+        (when-not (file-valid? path allow-single?)
+          (println "Error: Expected output" path "not found or empty.")
+          (System/exit 1))))))
+
+(defn build-prompt [{:keys [requires prompt]} ctx]
+  (when prompt
+    (let [file-refs (when (seq requires)
+                      (str (str/join " " (map #(str "@" (doc-path %)) requires))
+                           "\n\n"))]
+      (interpolate (str file-refs prompt) ctx))))
+
+(defn run-tests []
+  (println "Running tests...")
+  (let [{:keys [exit]} (shell {:continue true} "clj" "-X:test")]
+    (when (not= 0 exit)
+      (println "Unit tests failed. Aborting.")
+      (System/exit 1))))
+
+(defn cleanup-docs [doc-keys]
+  (doseq [doc-key doc-keys]
+    (let [path (doc-path doc-key)]
+      (when (fs/exists? path)
+        (fs/delete path)))))
+
+(defn log-to-file [msg]
+  (spit "hooks.log" (str msg "\n") :append true))
+
+(defn run-claude [prompt]
+  (println "Running Claude...")
+  (log-to-file "### Sending the following prompt to Claude:")
+  (log-to-file prompt)
+  (log-to-file "### End of prompt\n")
+  (shell "claude" "-p" prompt "--allowedTools" "Write"))
+
+(defn start-app []
+  (println "Starting app...")
+  (shell "make" "stop")
+  (process "make" "start")
+  (Thread/sleep 2000))
+
+(defn stop-app []
+  (println "Stopping app...")
+  (shell "make" "stop"))
+
+(defn create-human-opinion-if-missing []
+  (let [path (doc-path :human-opinion)]
+    (when-not (fs/exists? path)
+      (print (str path " not found. Create it? (y|n): "))
+      (flush)
+      (when (= "y" (str/trim (read-line)))
+        (spit path "")
+        (shell "code" path)))))
+
+(defn send-notification [stage-id message]
+  (let [send-msg "scripts/send-message.sh"
+        title (str "Stage: " (name stage-id))]
+    (when (fs/exists? send-msg)
+      (shell {:continue true} send-msg title message "Builder"))))
+
+(defn wait-for-human [message {:keys [id produces]}]
+  (shell "say" "Builder needs your attention now.")
+  (send-notification id message)
+  (when (some #{:human-opinion} produces)
+    (create-human-opinion-if-missing))
+  (println message)
+  (loop []
+    (print "Type 'ok' to proceed: ")
+    (flush)
+    (when (not= "ok" (str/trim (read-line)))
+      (recur))))
+
+(defn git-commit [message commit-message-prefix]
+  (shell "git" "add" ".")
+  (shell "git" "reset" "HEAD" "--" (str (docs-dir) "/"))
+  (shell "git" "commit" "-m" (str commit-message-prefix " - " message)))
+
+(defn git-amend-commit [commit-message-prefix]
+  (let [body (when (fs/exists? (doc-path :commit-message-body))
+               (slurp (doc-path :commit-message-body)))]
+    (shell "git" "commit" "--amend" "-m"
+           (str commit-message-prefix " - Implementation")
+           "-m" (or body ""))))
+
+(defn git-clear-next-feature []
+  (spit (doc-path :next-feature) "")
+  (shell "git" "add" ".")
+  (shell "git" "commit" "--amend" "--no-edit"))
+
+(defn run-stage [stage ctx]
+  (let [{:keys [id prompt human-input? start-app? stop-app? run-tests?
+                commit cleanup cleanup-after git-revert? amend-commit?
+                clear-next-feature? message]} stage
+        {:keys [commit-message-prefix]} ctx]
+    (println "\n=== Stage:" (name id) "===")
+
+    (check-requires stage)
+
+    (when cleanup
+      (cleanup-docs cleanup))
+
+    (when git-revert?
+      (shell "git" "revert" "--no-edit" "HEAD"))
+
+    (when start-app?
+      (start-app))
+
+    (when human-input?
+      (wait-for-human (interpolate (or message "Waiting for human input...") ctx) stage))
+
+    (when stop-app?
+      (stop-app))
+
+    (when prompt
+      (run-claude (build-prompt stage ctx)))
+
+    (check-produces stage)
+
+    (when run-tests?
+      (run-tests))
+
+    (when commit
+      (git-commit (:message commit) commit-message-prefix))
+
+    (when amend-commit?
+      (git-amend-commit commit-message-prefix))
+
+    (when cleanup-after
+      (cleanup-docs cleanup-after))
+
+    (when clear-next-feature?
+      (git-clear-next-feature))))
+
+(defn run-pipeline [ctx]
+  (doseq [stage (:stages *config*)]
+    (run-stage stage ctx)))
+
+(defn stage-id->node [id]
+  (-> (name id)
+      (str/replace #"-" "_")
+      str/upper-case))
+
+(defn doc-id->node [id]
+  (-> (name id)
+      (str/replace #"-" "_")))
+
+(defn commit-artifact-id [stage-id]
+  (keyword (str (name stage-id) "-commit")))
+
+(defn generate-mermaid []
+  (let [stages (:stages *config*)
+        sb (StringBuilder.)
+        commit-artifacts (atom #{})
+        pseudo-artifacts (atom #{})
+        last-commit (atom nil)
+        past-revert? (atom false)
+        post-revert-commits (atom [])
+        finalize-stage (atom nil)]
+    (.append sb "flowchart TB\n")
+    (doseq [{:keys [id requires produces commit git-revert? requires-commit? amend-commit?
+                    produces-pseudo requires-pseudo requires-commits]} stages]
+      (let [stage-node (stage-id->node id)]
+        (when amend-commit?
+          (reset! finalize-stage stage-node))
+        (when (seq requires)
+          (doseq [req requires]
+            (.append sb (format "    %s --> %s\n" (doc-id->node req) stage-node))))
+        (when (seq requires-pseudo)
+          (doseq [req requires-pseudo]
+            (.append sb (format "    %s --> %s\n" (doc-id->node req) stage-node))))
+        (when (and requires-commit? @last-commit)
+          (.append sb (format "    %s --> %s\n" (doc-id->node @last-commit) stage-node)))
+        (when (seq requires-commits)
+          (doseq [c requires-commits]
+            (.append sb (format "    %s --> %s\n" (doc-id->node (commit-artifact-id c)) stage-node))))
+        (when (seq produces)
+          (doseq [prod produces]
+            (.append sb (format "    %s --> %s\n" stage-node (doc-id->node prod)))))
+        (when (seq produces-pseudo)
+          (doseq [prod produces-pseudo]
+            (swap! pseudo-artifacts conj prod)
+            (.append sb (format "    %s --> %s\n" stage-node (doc-id->node prod)))))
+        (when (or commit git-revert?)
+          (let [commit-id (commit-artifact-id id)]
+            (swap! commit-artifacts conj commit-id)
+            (reset! last-commit commit-id)
+            (when (and @past-revert? commit)
+              (swap! post-revert-commits conj commit-id))
+            (.append sb (format "    %s --> %s\n" stage-node (doc-id->node commit-id)))))
+        (when git-revert?
+          (reset! past-revert? true))))
+    (when @finalize-stage
+      (doseq [c @post-revert-commits]
+        (.append sb (format "    %s --> %s\n" (doc-id->node c) @finalize-stage))))
+    (.append sb "\n")
+    (let [all-stages (map :id stages)
+          all-docs (->> stages
+                        (mapcat (juxt :requires :produces))
+                        flatten
+                        (remove nil?)
+                        distinct)]
+      (doseq [s all-stages]
+        (.append sb (format "    style %s fill:#455a64,color:#fff\n" (stage-id->node s))))
+      (.append sb "\n")
+      (doseq [d all-docs]
+        (.append sb (format "    style %s fill:#fff,stroke:#455a64,color:#000\n" (doc-id->node d))))
+      (doseq [c @commit-artifacts]
+        (.append sb (format "    style %s fill:#fff,stroke:#455a64,color:#000\n" (doc-id->node c))))
+      (doseq [p @pseudo-artifacts]
+        (.append sb (format "    style %s fill:#fff,stroke:#455a64,color:#000\n" (doc-id->node p)))))
+    (.toString sb)))
+
+(defn -main [& args]
+  (when (< (count args) 2)
+    (println "Usage: builder <pipeline-name> <commit-message-prefix>")
+    (System/exit 1))
+  (let [[pipeline-name commit-message-prefix] args]
+    (load-config! pipeline-name)
+    (run-pipeline {:commit-message-prefix commit-message-prefix})))

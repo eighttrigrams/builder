@@ -1,0 +1,55 @@
+flowchart TB
+    existingCode([Existing Code])
+    plan([Plan])
+    
+    existingCode --> EXP[Exploratory<br/>Implementation]
+    plan --> EXP
+    
+    EXP --> code([Code])
+    
+    code --> REV[Revert]
+    code --> CR[Code Review]
+    
+    CR --> review([Code Reviews])
+    CR --> obs([Boyscout<br/>Observations])
+    
+    review --> PLAN[Planning]
+    obs --> PLAN
+    
+    PLAN --> planA([Plan A<br/>Boyscout])
+    PLAN --> planB([Plan B<br/>Implementation])
+    
+    planA --> HUMAN[Human]
+    planB --> HUMAN
+    
+    HUMAN --> opinion([Human Opinion])
+    
+    planA --> REFACTOR[Boyscout<br/>Refactoring]
+    opinion --> REFACTOR
+    
+    REFACTOR --> IMPL[Implementation]
+    
+    planB --> IMPL
+    opinion --> IMPL
+    
+    IMPL --> code2([Code])
+
+    %% Phases are rectangular, dark
+    style EXP fill:#455a64,color:#fff
+    style REV fill:#455a64,color:#fff
+    style CR fill:#455a64,color:#fff
+    style PLAN fill:#455a64,color:#fff
+    style HUMAN fill:#455a64,color:#fff
+    style REFACTOR fill:#455a64,color:#fff
+    style IMPL fill:#455a64,color:#fff
+    
+    %% Artifacts are rounded, light
+    style existingCode fill:#fff,stroke:#455a64,color:#000
+    style plan fill:#fff,stroke:#455a64,color:#000
+    style code fill:#fff,stroke:#455a64,color:#000
+    style review fill:#fff,stroke:#455a64,color:#000
+    style obs fill:#fff,stroke:#455a64,color:#000
+    style planA fill:#fff,stroke:#455a64,color:#000
+    style planB fill:#fff,stroke:#455a64,color:#000
+    style opinion fill:#fff,stroke:#455a64,color:#000
+    style code2 fill:#fff,stroke:#455a64,color:#000

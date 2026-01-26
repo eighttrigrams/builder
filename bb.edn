@@ -1,0 +1,4 @@
+{:paths ["src" "resources"]
+ :deps {}
+ :bbin/bin {builder {:main-opts ["-m" "builder.core"]}
+            builder-mermaid {:main-opts ["-m" "builder.mermaid"]}}}
