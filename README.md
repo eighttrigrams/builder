@@ -19,7 +19,7 @@ Pipelines with `:standard-fullstack? true` require a port and a Makefile with `s
 Generate mermaid diagram of a pipeline:
 
 ```bash
-builder-mermaid <pipeline-name> [output-file]
+bb -m builder.mermaid <pipeline-name> [output-file]
 ```
 
 ### Bundled pipelines

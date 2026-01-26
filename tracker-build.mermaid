@@ -1,55 +1,83 @@
 flowchart TB
-    existingCode([Existing Code])
-    plan([Plan])
-    
-    existingCode --> EXP[Exploratory<br/>Implementation]
-    plan --> EXP
-    
-    EXP --> code([Code])
-    
-    code --> REV[Revert]
-    code --> CR[Code Review]
-    
-    CR --> review([Code Reviews])
-    CR --> obs([Boyscout<br/>Observations])
-    
-    review --> PLAN[Planning]
-    obs --> PLAN
-    
-    PLAN --> planA([Plan A<br/>Boyscout])
-    PLAN --> planB([Plan B<br/>Implementation])
-    
-    planA --> HUMAN[Human]
-    planB --> HUMAN
-    
-    HUMAN --> opinion([Human Opinion])
-    
-    planA --> REFACTOR[Boyscout<br/>Refactoring]
-    opinion --> REFACTOR
-    
-    REFACTOR --> IMPL[Implementation]
-    
-    planB --> IMPL
-    opinion --> IMPL
-    
-    IMPL --> code2([Code])
+    next_feature --> EXPLORATORY_IMPLEMENTATION
+    EXPLORATORY_IMPLEMENTATION --> exploratory_implementers_complaints
+    EXPLORATORY_IMPLEMENTATION --> exploratory_justification
+    EXPLORATORY_IMPLEMENTATION --> exploratory_implementation_commit
+    exploratory_implementation_commit --> CODE_SMELL_DETECTION
+    CODE_SMELL_DETECTION --> boyscout_observations
+    exploratory_implementers_complaints --> ARCHITECTURE_REVIEW
+    boyscout_observations --> ARCHITECTURE_REVIEW
+    exploratory_implementation_commit --> ARCHITECTURE_REVIEW
+    ARCHITECTURE_REVIEW --> pr_architecture_review
+    exploratory_implementation_commit --> DATA_CONSISTENCY_REVIEW
+    DATA_CONSISTENCY_REVIEW --> pr_data_consistency_review
+    exploratory_implementation_commit --> SECURITY_REVIEW
+    SECURITY_REVIEW --> pr_security_review
+    exploratory_implementers_complaints --> PLANNING
+    next_feature --> PLANNING
+    exploratory_justification --> PLANNING
+    pr_architecture_review --> PLANNING
+    pr_security_review --> PLANNING
+    pr_data_consistency_review --> PLANNING
+    boyscout_observations --> PLANNING
+    PLANNING --> boyscout_plan
+    PLANNING --> implementation_plan
+    boyscout_plan --> HUMAN_REVIEW
+    implementation_plan --> HUMAN_REVIEW
+    HUMAN_REVIEW --> human_opinion
+    exploratory_implementation_commit --> REVERT
+    REVERT --> revert_commit
+    boyscout_plan --> BOYSCOUT_REFACTORING
+    human_opinion --> BOYSCOUT_REFACTORING
+    BOYSCOUT_REFACTORING --> boyscout_report
+    BOYSCOUT_REFACTORING --> boyscout_refactoring_commit
+    next_feature --> IMPLEMENTATION
+    boyscout_report --> IMPLEMENTATION
+    implementation_plan --> IMPLEMENTATION
+    human_opinion --> IMPLEMENTATION
+    IMPLEMENTATION --> feature_justification
+    IMPLEMENTATION --> implementation_commit
+    feature_justification --> FINAL_REVIEW
+    boyscout_refactoring_commit --> FINAL_REVIEW
+    implementation_commit --> FINAL_REVIEW
+    FINAL_REVIEW --> human_ok
+    next_feature --> SYNTHESIZE_COMMIT
+    feature_justification --> SYNTHESIZE_COMMIT
+    human_ok --> SYNTHESIZE_COMMIT
+    SYNTHESIZE_COMMIT --> commit_message_body
+    commit_message_body --> FINALIZE
+    boyscout_refactoring_commit --> FINALIZE
+    implementation_commit --> FINALIZE
 
-    %% Phases are rectangular, dark
-    style EXP fill:#455a64,color:#fff
-    style REV fill:#455a64,color:#fff
-    style CR fill:#455a64,color:#fff
-    style PLAN fill:#455a64,color:#fff
-    style HUMAN fill:#455a64,color:#fff
-    style REFACTOR fill:#455a64,color:#fff
-    style IMPL fill:#455a64,color:#fff
-    
-    %% Artifacts are rounded, light
-    style existingCode fill:#fff,stroke:#455a64,color:#000
-    style plan fill:#fff,stroke:#455a64,color:#000
-    style code fill:#fff,stroke:#455a64,color:#000
-    style review fill:#fff,stroke:#455a64,color:#000
-    style obs fill:#fff,stroke:#455a64,color:#000
-    style planA fill:#fff,stroke:#455a64,color:#000
-    style planB fill:#fff,stroke:#455a64,color:#000
-    style opinion fill:#fff,stroke:#455a64,color:#000
-    style code2 fill:#fff,stroke:#455a64,color:#000
+    style EXPLORATORY_IMPLEMENTATION fill:#455a64,color:#fff
+    style CODE_SMELL_DETECTION fill:#455a64,color:#fff
+    style ARCHITECTURE_REVIEW fill:#455a64,color:#fff
+    style DATA_CONSISTENCY_REVIEW fill:#455a64,color:#fff
+    style SECURITY_REVIEW fill:#455a64,color:#fff
+    style PLANNING fill:#455a64,color:#fff
+    style HUMAN_REVIEW fill:#455a64,color:#fff
+    style REVERT fill:#455a64,color:#fff
+    style BOYSCOUT_REFACTORING fill:#455a64,color:#fff
+    style IMPLEMENTATION fill:#455a64,color:#fff
+    style FINAL_REVIEW fill:#455a64,color:#fff
+    style SYNTHESIZE_COMMIT fill:#455a64,color:#fff
+    style FINALIZE fill:#455a64,color:#fff
+
+    style next_feature fill:#fff,stroke:#455a64,color:#000
+    style exploratory_implementers_complaints fill:#fff,stroke:#455a64,color:#000
+    style exploratory_justification fill:#fff,stroke:#455a64,color:#000
+    style boyscout_observations fill:#fff,stroke:#455a64,color:#000
+    style pr_architecture_review fill:#fff,stroke:#455a64,color:#000
+    style pr_data_consistency_review fill:#fff,stroke:#455a64,color:#000
+    style pr_security_review fill:#fff,stroke:#455a64,color:#000
+    style boyscout_plan fill:#fff,stroke:#455a64,color:#000
+    style implementation_plan fill:#fff,stroke:#455a64,color:#000
+    style human_opinion fill:#fff,stroke:#455a64,color:#000
+    style boyscout_report fill:#fff,stroke:#455a64,color:#000
+    style feature_justification fill:#fff,stroke:#455a64,color:#000
+    style commit_message_body fill:#fff,stroke:#455a64,color:#000
+    style exploratory_implementation_commit fill:#fff,stroke:#455a64,color:#000
+    style boyscout_refactoring_commit fill:#fff,stroke:#455a64,color:#000
+    style revert_commit fill:#fff,stroke:#455a64,color:#000
+    style implementation_commit fill:#fff,stroke:#455a64,color:#000
+    style human_ok fill:#fff,stroke:#455a64,color:#000
