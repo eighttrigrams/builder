@@ -83,9 +83,10 @@
 
 (defn load-skill [skill-path]
   (when skill-path
-    (if-let [resource (io/resource skill-path)]
-      (strip-frontmatter (slurp resource))
-      (throw (ex-info "Skill file not found" {:path skill-path})))))
+    (let [full-path (str (builder-root) "/" skill-path)]
+      (if (fs/exists? full-path)
+        (strip-frontmatter (slurp full-path))
+        (throw (ex-info "Skill file not found" {:path full-path}))))))
 
 (defn build-prompt [{:keys [requires prompt skill]} ctx]
   (when prompt
