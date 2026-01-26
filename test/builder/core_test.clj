@@ -16,3 +16,28 @@
          (core/validate-pipeline
           {:stages [{:id :stage-1 :produces [:other]}
                     {:id :stage-2 :requires [:spec]}]})))))
+
+(deftest cleanup-after-removes-from-available
+  (testing "valid: require before cleanup-after"
+    (is (= true
+           (core/validate-pipeline
+            {:stages [{:id :stage-1 :produces [:spec]}
+                      {:id :stage-2 :requires [:spec] :cleanup-after [:spec]}
+                      {:id :stage-3 :produces [:other]}]}))))
+
+  (testing "invalid: require after cleanup-after"
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"Required document not produced"
+         (core/validate-pipeline
+          {:stages [{:id :stage-1 :produces [:spec]}
+                    {:id :stage-2 :cleanup-after [:spec]}
+                    {:id :stage-3 :requires [:spec]}]}))))
+
+  (testing "valid: produce, cleanup, reproduce, then require"
+    (is (= true
+           (core/validate-pipeline
+            {:stages [{:id :stage-1 :produces [:spec]}
+                      {:id :stage-2 :cleanup-after [:spec]}
+                      {:id :stage-3 :produces [:spec]}
+                      {:id :stage-4 :requires [:spec]}]})))))

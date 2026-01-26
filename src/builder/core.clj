@@ -9,14 +9,16 @@
 
 (defn validate-pipeline [config]
   (let [produced (atom (set (:seed-artifacts config)))]
-    (doseq [{:keys [requires produces]} (:stages config)]
+    (doseq [{:keys [requires produces cleanup-after]} (:stages config)]
       (when requires
         (doseq [req requires]
           (when-not (contains? @produced req)
             (throw (ex-info "Required document not produced by earlier stage"
                             {:required req :produced @produced})))))
       (when produces
-        (swap! produced into produces)))
+        (swap! produced into produces))
+      (when cleanup-after
+        (swap! produced #(apply disj % cleanup-after))))
     true))
 
 (defn load-config! [pipeline-name]
