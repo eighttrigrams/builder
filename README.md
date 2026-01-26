@@ -26,6 +26,12 @@ bb -m builder.mermaid <pipeline-name> [output-file]
 
 - `fullstack-exploratory-first-with-boyscout-help` - Exploratory-first workflow with code review and boyscout refactoring
 
+## Validate a pipeline
+
+```bash
+bb validate <pipeline-name>
+```
+
 ## Testing
 
 ```bash

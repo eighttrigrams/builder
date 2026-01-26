@@ -6,6 +6,10 @@
                :task (let [result (t/run-tests 'builder.core-test)]
                        (System/exit (if (and (zero? (:fail result))
                                              (zero? (:error result)))
-                                      0 1)))}}
+                                      0 1)))}
+         validate {:requires ([builder.core :as core])
+                   :task (do
+                           (core/load-config! (first *command-line-args*))
+                           (println "Pipeline valid."))}}
  :bbin/bin {builder {:main-opts ["-m" "builder.core"]}
             builder-mermaid {:main-opts ["-m" "builder.mermaid"]}}}
