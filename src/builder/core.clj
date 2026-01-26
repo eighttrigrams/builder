@@ -81,16 +81,6 @@
         content))
     content))
 
-
-(defn build-prompt [{:keys [requires prompt skill]} ctx]
-  (when prompt
-    (let [file-refs (when (seq requires)
-                      (str (str/join " " (map #(str "@" (doc-path %)) requires))
-                           "\n\n"))
-          skill-content (when skill
-                          (str (load-skill skill) "\n\n"))]
-      (interpolate (str skill-content file-refs prompt) ctx))))
-
 (defn run-tests []
   (println "Running tests...")
   (let [{:keys [exit]} (shell {:continue true} "make" "test")]
@@ -121,6 +111,15 @@
       (if (fs/exists? full-path)
         (strip-frontmatter (slurp full-path))
         (throw (ex-info "Skill file not found" {:path full-path}))))))
+
+(defn build-prompt [{:keys [requires prompt skill]} ctx]
+  (when prompt
+    (let [file-refs (when (seq requires)
+                      (str (str/join " " (map #(str "@" (doc-path %)) requires))
+                           "\n\n"))
+          skill-content (when skill
+                          (str (load-skill skill) "\n\n"))]
+      (interpolate (str skill-content file-refs prompt) ctx))))
 
 (defn run-claude [prompt]
   (println "Running Claude...")
