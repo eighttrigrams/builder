@@ -68,7 +68,7 @@
 
 (defn run-tests []
   (println "Running tests...")
-  (let [{:keys [exit]} (shell {:continue true} "clj" "-X:test")]
+  (let [{:keys [exit]} (shell {:continue true} "make" "test")]
     (when (not= 0 exit)
       (println "Unit tests failed. Aborting.")
       (System/exit 1))))
