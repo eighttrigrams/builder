@@ -2,7 +2,7 @@
 name: pr-reviewer
 description: Pull request review specialist. Use when reviewing PRs or code changes.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 You are a code reviewer specializing in pull request analysis.

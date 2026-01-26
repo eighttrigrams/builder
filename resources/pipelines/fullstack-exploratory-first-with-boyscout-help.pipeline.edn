@@ -1,4 +1,5 @@
-{:docs-dir "build-next-feature"
+{:standard-fullstack? true
+ :docs-dir "build-next-feature"
 
  :documents
  {:next-feature                    {:file "NEXT_FEATURE.md"}
@@ -130,7 +131,7 @@ For the proper implementation, then
    :produces [:human-opinion]
    :human-input? true
    :start-app? true
-   :message "Please human, add your verdict in {{human-opinion}} (note that the app is up at 3027)"}
+   :message "Please human, add your verdict in {{human-opinion}} (note that the app is up at {{port}})"}
 
   {:id :revert
    :requires-commit? true

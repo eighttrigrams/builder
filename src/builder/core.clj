@@ -8,7 +8,7 @@
 (def ^:dynamic *config* nil)
 
 (defn load-config! [pipeline-name]
-  (let [resource-name (str "pipelines/" pipeline-name ".edn")]
+  (let [resource-name (str "pipelines/" pipeline-name ".pipeline.edn")]
     (if-let [resource (io/resource resource-name)]
       (alter-var-root #'*config* (constantly (edn/read-string (slurp resource))))
       (do
@@ -277,10 +277,28 @@
         (.append sb (format "    style %s fill:#fff,stroke:#455a64,color:#000\n" (doc-id->node p)))))
     (.toString sb)))
 
-(defn -main [& args]
-  (when (< (count args) 2)
-    (println "Usage: builder <pipeline-name> <commit-message-prefix>")
+(defn check-makefile-targets []
+  (when-not (fs/exists? "Makefile")
+    (println "Error: Makefile not found in current directory")
     (System/exit 1))
-  (let [[pipeline-name commit-message-prefix] args]
+  (let [content (slurp "Makefile")
+        has-target? #(re-find (re-pattern (str "(?m)^" % ":")) content)]
+    (doseq [target ["start" "stop" "test"]]
+      (when-not (has-target? target)
+        (println "Error: Makefile missing required target:" target)
+        (System/exit 1)))))
+
+(defn -main [& args]
+  (let [[pipeline-name commit-message-prefix port] args]
+    (when (< (count args) 2)
+      (println "Usage: builder <pipeline-name> <commit-message-prefix> [port]")
+      (System/exit 1))
     (load-config! pipeline-name)
-    (run-pipeline {:commit-message-prefix commit-message-prefix})))
+    (when (:standard-fullstack? *config*)
+      (when-not port
+        (println "Error: This pipeline requires a port argument")
+        (println "Usage: builder" pipeline-name "<commit-message-prefix> <port>")
+        (System/exit 1))
+      (check-makefile-targets))
+    (run-pipeline {:commit-message-prefix commit-message-prefix
+                   :port port})))
