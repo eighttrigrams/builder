@@ -19,7 +19,31 @@
   :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}}
 
  :stages
- [{:id :exploratory-implementation
+ [{:id :enrich-feature
+   :requires [:next-feature]
+   :produces [:next-feature]
+   :prompt "Read the feature description carefully.
+
+Assess whether this is a **small feature** - meaning it would likely:
+- Touch only 1-2 files
+- Require minimal logic changes
+- Be completed in under 30 lines of code changes
+
+If the feature IS small, append the following section to the file:
+
+---
+
+## Boyscout Guidance
+
+Since this feature is small, use the saved cycles to give the boyscout extra room for cleanup. During the boyscout phase, go beyond the minimum - look for nearby code smells, minor refactorings, and small improvements in the areas you touch. Don't go overboard, but make good use of the time.
+
+---
+
+If the feature is NOT small (medium or large), do NOT modify the file at all.
+
+Write your result to {{next-feature}}."}
+
+  {:id :exploratory-implementation
    :requires [:next-feature]
    :produces [:exploratory-implementers-complaints :exploratory-justification]
    :run-tests? true
