@@ -329,10 +329,10 @@
     (edn/read-string (slurp config-file))))
 
 (defn -main [& args]
-  (let [[commit-message-prefix] args
+  (let [[commit-message-prefix feature-name] args
         {:keys [pipeline-name port project-name]} (load-project-config)]
-    (when-not commit-message-prefix
-      (println "Usage: builder <commit-message-prefix>")
+    (when-not (and commit-message-prefix feature-name)
+      (println "Usage: builder <commit-message-prefix> <feature-name>")
       (System/exit 1))
     (when-not (and pipeline-name project-name)
       (println "Error: project-builder.edn must contain :pipeline-name and :project-name")
@@ -344,5 +344,6 @@
         (System/exit 1))
       (check-makefile-targets))
     (run-pipeline {:commit-message-prefix commit-message-prefix
+                   :feature-name feature-name
                    :port port
                    :project-name project-name})))
