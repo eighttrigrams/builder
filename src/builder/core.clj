@@ -152,15 +152,15 @@
         (spit path "")
         (shell "code" path)))))
 
-(defn send-notification [stage-id message]
+(defn send-notification [stage-id message project-name]
   (let [send-msg "scripts/send-message.sh"
         title (str "Stage: " (name stage-id))]
     (when (fs/exists? send-msg)
-      (shell {:continue true} send-msg title message "Builder"))))
+      (shell {:continue true} send-msg title message project-name))))
 
-(defn wait-for-human [message {:keys [id produces]}]
-  (shell "say" "Builder needs your attention now.")
-  (send-notification id message)
+(defn wait-for-human [message {:keys [id produces]} project-name]
+  (shell "say" (str project-name " needs your attention now."))
+  (send-notification id message project-name)
   (when (some #{:human-opinion} produces)
     (create-human-opinion-if-missing))
   (println message)
@@ -191,7 +191,7 @@
   (let [{:keys [id prompt human-input? start-app? stop-app? run-tests?
                 commit cleanup cleanup-after git-revert? amend-commit?
                 clear-next-feature? message]} stage
-        {:keys [commit-message-prefix]} ctx]
+        {:keys [commit-message-prefix project-name]} ctx]
     (println "\n=== Stage:" (name id) "===")
 
     (check-requires stage)
@@ -206,7 +206,7 @@
       (start-app))
 
     (when human-input?
-      (wait-for-human (interpolate (or message "Waiting for human input...") ctx) stage))
+      (wait-for-human (interpolate (or message "Waiting for human input...") ctx) stage project-name))
 
     (when stop-app?
       (stop-app))
@@ -321,17 +321,28 @@
         (println "Error: Makefile missing required target:" target)
         (System/exit 1)))))
 
+(defn load-project-config []
+  (let [config-file "project-builder.edn"]
+    (when-not (fs/exists? config-file)
+      (println "Error: project-builder.edn not found in current directory")
+      (System/exit 1))
+    (edn/read-string (slurp config-file))))
+
 (defn -main [& args]
-  (let [[pipeline-name commit-message-prefix port] args]
-    (when (< (count args) 2)
-      (println "Usage: builder <pipeline-name> <commit-message-prefix> [port]")
+  (let [[commit-message-prefix] args
+        {:keys [pipeline-name port project-name]} (load-project-config)]
+    (when-not commit-message-prefix
+      (println "Usage: builder <commit-message-prefix>")
+      (System/exit 1))
+    (when-not (and pipeline-name project-name)
+      (println "Error: project-builder.edn must contain :pipeline-name and :project-name")
       (System/exit 1))
     (load-config! pipeline-name)
     (when (:standard-fullstack? *config*)
       (when-not port
-        (println "Error: This pipeline requires a port argument")
-        (println "Usage: builder" pipeline-name "<commit-message-prefix> <port>")
+        (println "Error: This pipeline requires :port in project-builder.edn")
         (System/exit 1))
       (check-makefile-targets))
     (run-pipeline {:commit-message-prefix commit-message-prefix
-                   :port port})))
+                   :port port
+                   :project-name project-name})))
