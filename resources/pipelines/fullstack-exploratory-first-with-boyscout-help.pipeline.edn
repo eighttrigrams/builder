@@ -174,9 +174,6 @@ For the proper implementation, then
 
   {:id :revert
    :requires-commit? true
-   :cleanup [:exploratory-implementers-complaints :exploratory-justification
-             :pr-architecture-review :pr-data-consistency-review :pr-security-review
-             :boyscout-observations]
    :git-revert? true}
 
   {:id :boyscout-refactoring
@@ -195,8 +192,7 @@ Report what you did in {{boyscout-report}}"}
    :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
    :produces [:feature-justification]
    :run-tests? true
-   :commit {:message "Implementation"}
-   :cleanup-after [:boyscout-report :implementation-plan :human-opinion]
+   :commit {:message "Implementation"} 
    :prompt "Now implement the feature properly, according to the implementation plan!
 Make sure to use the UI skill to watch your implementation results live in the browser.
 
@@ -217,6 +213,8 @@ Report what you did in {{feature-justification}}"}
    :requires [:next-feature :feature-justification]
    :requires-pseudo [:human-ok]
    :produces [:commit-message-body]
+   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification
+                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations]
    :prompt "Write a commit message body summarizing what was done and why.
 Output ONLY the commit message body (no subject line, no markdown fences).
 Write the result to {{commit-message-body}}"}
