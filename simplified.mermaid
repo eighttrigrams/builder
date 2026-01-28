@@ -1,0 +1,45 @@
+flowchart TD
+    ExistingCode([Existing Code])
+    Plan([Plan])
+    ExpImpl[Exploratory<br>Implementation]
+    Code1([Code])
+    Revert[Revert]
+    CodeReview[Code Review]
+    CodeReviews([Code Reviews])
+    BoyscoutObs([Boyscout<br>Observations])
+    Planning[Planning]
+    PlanA([Boyscout Plan])
+    PlanB([Implementation Plan])
+    Human[Human]
+    HumanOp([Human Opinion])
+    BoyscoutRef[Preparatory<br>Refactoring]
+    Implementation[Implementation]
+    Code2([Code])
+
+    ExistingCode --> ExpImpl
+    Plan --> ExpImpl
+    ExpImpl --> Code1
+    Code1 --> Revert
+    Code1 --> CodeReview
+    CodeReview --> CodeReviews
+    CodeReview --> BoyscoutObs
+    CodeReviews --> Planning
+    BoyscoutObs --> Planning
+    Planning --> PlanA
+    Planning --> PlanB
+    PlanA --> Human
+    PlanB --> Human
+    Human --> HumanOp
+    HumanOp --> BoyscoutRef
+    BoyscoutRef --> Implementation
+    Implementation --> Code2
+
+    style ExistingCode fill:#fff,stroke:#333,color:#333
+    style Plan fill:#fff,stroke:#333,color:#333
+    style Code1 fill:#fff,stroke:#333,color:#333
+    style CodeReviews fill:#fff,stroke:#333,color:#333
+    style HumanOp fill:#fff,stroke:#333,color:#333
+    style Code2 fill:#fff,stroke:#333,color:#333
+    style BoyscoutObs fill:#fff,stroke:#333,color:#333
+    style PlanA fill:#fff,stroke:#333,color:#333
+    style PlanB fill:#fff,stroke:#333,color:#333
