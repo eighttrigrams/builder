@@ -144,14 +144,10 @@
   (println "Stopping app...")
   (shell "make" "stop"))
 
-(defn create-human-opinion-if-missing []
+(defn create-human-opinion []
   (let [path (doc-path :human-opinion)]
-    (when-not (fs/exists? path)
-      (print (str path " not found. Create it? (y|n): "))
-      (flush)
-      (when (= "y" (str/trim (read-line)))
-        (spit path "")
-        (shell "code" path)))))
+    (spit path "")
+    (shell "code" path)))
 
 (defn send-notification [stage-id message project-name]
   (let [send-msg "scripts/send-message.sh"
@@ -163,7 +159,7 @@
   (shell "say" (str project-name " needs your attention now."))
   (send-notification id message project-name)
   (when (some #{:human-opinion} produces)
-    (create-human-opinion-if-missing))
+    (create-human-opinion))
   (println message)
   (loop []
     (print "Type 'ok' to proceed: ")
