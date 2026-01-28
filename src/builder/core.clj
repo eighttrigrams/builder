@@ -123,15 +123,16 @@
                           (str (load-skill skill) "\n\n"))]
       (interpolate (str skill-content file-refs prompt) ctx))))
 
-(defn run-claude [prompt]
-  (println "Running Claude...")
+(defn run-claude [prompt model]
+  (println "Running Claude with model:" model)
   (let [plugin-dir (builder-root)]
     (println "Plugin dir:" plugin-dir)
     (log-to-file (str "### Plugin dir: " plugin-dir))
+    (log-to-file (str "### Model: " model))
     (log-to-file "### Sending the following prompt to Claude:")
     (log-to-file prompt)
     (log-to-file "### End of prompt\n")
-    (shell "claude" "-p" prompt "--allowedTools" "Write" "--plugin-dir" plugin-dir)))
+    (shell "claude" "-p" prompt "--allowedTools" "Write" "--plugin-dir" plugin-dir "--model" model)))
 
 (defn start-app []
   (println "Starting app...")
@@ -212,7 +213,8 @@
       (stop-app))
 
     (when prompt
-      (run-claude (build-prompt stage ctx)))
+      (let [model (or (:model stage) (:model ctx))]
+        (run-claude (build-prompt stage ctx) model)))
 
     (check-produces stage)
 
@@ -321,16 +323,26 @@
         (println "Error: Makefile missing required target:" target)
         (System/exit 1)))))
 
+(def valid-models #{"haiku" "sonnet" "opus"})
+
 (defn load-project-config []
   (let [config-file "project-builder.edn"]
     (when-not (fs/exists? config-file)
       (println "Error: project-builder.edn not found in current directory")
       (System/exit 1))
-    (edn/read-string (slurp config-file))))
+    (let [config (edn/read-string (slurp config-file))
+          model (:model config)]
+      (when-not model
+        (println "Error: project-builder.edn must contain :model (haiku, sonnet, or opus)")
+        (System/exit 1))
+      (when-not (valid-models model)
+        (println "Error: :model must be one of: haiku, sonnet, opus")
+        (System/exit 1))
+      config)))
 
 (defn -main [& args]
   (let [[feature-name] args
-        {:keys [pipeline-name port project-name]} (load-project-config)]
+        {:keys [pipeline-name port project-name model]} (load-project-config)]
     (when-not feature-name
       (println "Usage: builder <feature-name>")
       (System/exit 1))
@@ -346,4 +358,5 @@
     (run-pipeline {:commit-message-prefix (str "feature/" feature-name)
                    :feature-name feature-name
                    :port port
-                   :project-name project-name})))
+                   :project-name project-name
+                   :model model})))
