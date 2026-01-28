@@ -181,7 +181,6 @@ For the proper implementation, then
    :produces [:boyscout-report]
    :run-tests? true
    :commit {:message "Preparatory refactoring"}
-   :cleanup-after [:boyscout-plan]
    :prompt "Now implement the boyscout plan!
 
 Make sure tests run (`make test`)
@@ -214,7 +213,7 @@ Report what you did in {{feature-justification}}"}
    :requires-pseudo [:human-ok]
    :produces [:commit-message-body]
    :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification
-                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations]
+                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan]
    :prompt "Write a commit message body summarizing what was done and why.
 Output ONLY the commit message body (no subject line, no markdown fences).
 Write the result to {{commit-message-body}}"}
