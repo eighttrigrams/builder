@@ -184,9 +184,14 @@
   (shell "git" "add" ".")
   (shell "git" "commit" "--amend" "--no-edit"))
 
+(defn run-shell-stage [{:keys [shell shell-output]}]
+  (when (and shell shell-output)
+    (let [result (babashka.process/shell {:out :string} shell)]
+      (spit (doc-path shell-output) (:out result)))))
+
 (defn run-stage [stage ctx]
   (let [{:keys [id prompt human-input? start-app? stop-app? run-tests?
-                commit cleanup cleanup-after git-revert? amend-commit?
+                commit cleanup cleanup-after git-revert? git-restore? amend-commit?
                 clear-next-feature? message]} stage
         {:keys [commit-message-prefix project-name]} ctx]
     (println "\n=== Stage:" (name id) "===")
@@ -198,6 +203,11 @@
 
     (when git-revert?
       (shell "git" "revert" "--no-edit" "HEAD"))
+
+    (when git-restore?
+      (shell "git" "restore" "."))
+
+    (run-shell-stage stage)
 
     (when start-app?
       (start-app))
