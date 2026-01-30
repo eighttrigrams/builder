@@ -7,6 +7,7 @@
  {:next-feature                    {:file "NEXT_FEATURE.md"}
   :exploratory-implementers-complaints           {:file "EXPLORATORY_IMPLEMENTERS_COMPLAINTS.md"}
   :exploratory-justification       {:file "EXPLORATORY_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
+  :exploratory-diff                {:file "EXPLORATORY_DIFF.txt"}
   :pr-architecture-review          {:file "PR_ARCHITECTURE_REVIEW_RESULT.md"}
   :pr-data-consistency-review      {:file "PR_DATA_CONSISTENCY_REVIEW_RESULT.md"}
   :pr-security-review              {:file "PR_SECURITY_REVIEW_RESULT.md"}
@@ -47,7 +48,6 @@ Write your result to {{next-feature}}."}
    :requires [:next-feature]
    :produces [:exploratory-implementers-complaints :exploratory-justification]
    :run-tests? true
-   :commit {:message "Exploratory implementation"}
    :prompt "We are building a new feature {{feature-name}}.
 
 1. Implement the feature.
@@ -63,10 +63,16 @@ Write your result to {{next-feature}}."}
     - Write this to {{exploratory-justification}}
         - If you have taken screenshots, list names of screenshots in this doc (prefix the names with where they are stored, namely .playwright-mcp/)"}
 
+  {:id :capture-exploratory-diff
+   :requires [:exploratory-justification]
+   :produces [:exploratory-diff]
+   :shell "git diff -U10"
+   :shell-output :exploratory-diff}
+
   {:id :code-smell-detection
-   :requires-commit? true
+   :requires [:exploratory-diff]
    :produces [:boyscout-observations]
-   :prompt "Look at the diff between HEAD and master (`git diff master...HEAD`).
+   :prompt "Look at the exploratory diff in {{exploratory-diff}}.
   
   For each changed file, also look at surrounding context 
   - the function which was touched
@@ -101,38 +107,38 @@ Write your result to {{next-feature}}."}
   Write your findings to {{boyscout-observations}}."}
 
   {:id :architecture-review
-   :requires-commit? true
-   :requires [:exploratory-implementers-complaints :boyscout-observations]
+   :requires [:exploratory-diff :exploratory-implementers-complaints :boyscout-observations]
    :produces [:pr-architecture-review]
    :skill "skills/architecture-review/SKILL.md"
-   :prompt "Review the current diff against master (`git diff master...HEAD`).
+   :prompt "Review the exploratory diff in {{exploratory-diff}}.
 Write findings to {{pr-architecture-review}}.
 You don't need to mention anything already in {{boyscout-observations}} or {{exploratory-implementers-complaints}}."}
 
   {:id :data-consistency-review
-   :requires-commit? true
+   :requires [:exploratory-diff]
    :produces [:pr-data-consistency-review]
    :skill "skills/data-consistency-review/SKILL.md"
-   :prompt "Review the current diff against master (`git diff master...HEAD`).
+   :prompt "Review the exploratory diff in {{exploratory-diff}}.
 Write findings to {{pr-data-consistency-review}}."}
 
   {:id :security-review
-   :requires-commit? true
+   :requires [:exploratory-diff]
    :produces [:pr-security-review]
    :skill "skills/security-review/SKILL.md"
-   :prompt "Review the current diff against master (`git diff master...HEAD`).
+   :prompt "Review the exploratory diff in {{exploratory-diff}}.
 Write findings to {{pr-security-review}}."} 
 
   {:id :planning
    :requires [:exploratory-implementers-complaints
               :next-feature
               :exploratory-justification
+              :exploratory-diff
               :pr-architecture-review
               :pr-security-review
               :pr-data-consistency-review
               :boyscout-observations]
    :produces [:boyscout-plan :implementation-plan]
-   :prompt "Then look at the previous to last commit (against master). Its name is \"feature/{{feature-name}} - Exploratory implementation\"
+   :prompt "Review the exploratory diff in {{exploratory-diff}}.
 
 ## High level - what we gonna do
 
@@ -153,7 +159,7 @@ or to to the implementation plan but not to both.
             
 Take especially seriously what you learned from {{exploratory-implementers-complaints}} and {{boyscout-observations}}.
 
-Note that soon we will revert the last commit in which we did our exploration.
+Note that soon we will discard the exploratory changes.
 So the cleanup will be performed against the sources as they appeared in main branch.
 Dont put anything specific to our feature in the preparatory boyscout plan. Just make it
 nicer for the things which go to the proper implementation. I repeat: Absolutely **nothing
@@ -173,8 +179,8 @@ For the proper implementation, then
    :message "Please human, add your verdict in {{human-opinion}} (note that the app is up at {{port}})"}
 
   {:id :revert
-   :requires-commit? true
-   :git-revert? true}
+   :requires [:human-opinion]
+   :git-restore? true}
 
   {:id :boyscout-refactoring
    :requires [:boyscout-plan :human-opinion]
@@ -212,7 +218,7 @@ Report what you did in {{feature-justification}}"}
    :requires [:next-feature :feature-justification]
    :requires-pseudo [:human-ok]
    :produces [:commit-message-body]
-   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification
+   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
                    :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan]
    :prompt "Write a commit message body summarizing what was done and why.
 Output ONLY the commit message body (no subject line, no markdown fences).
