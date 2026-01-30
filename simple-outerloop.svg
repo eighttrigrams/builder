@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <!-- Main circle container -->
+  <circle cx="200" cy="250" r="180" fill="#2d2d2d" stroke="#555" stroke-width="2"/>
+  
+  <!-- "Ralph" loop label -->
+  <text x="200" y="95" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#e0e0e0">"Ralph" loop</text>
+  
+  <!-- Backlog cylinder -->
+  <path d="M 160 140 L 160 190 A 40 12 0 0 0 240 190 L 240 140 Z" fill="#404040" stroke="none"/>
+  <line x1="160" y1="140" x2="160" y2="190" stroke="#888" stroke-width="1.5"/>
+  <line x1="240" y1="140" x2="240" y2="190" stroke="#888" stroke-width="1.5"/>
+  <path d="M 160 190 A 40 12 0 0 0 240 190" fill="none" stroke="#888" stroke-width="1.5"/>
+  <ellipse cx="200" cy="140" rx="40" ry="12" fill="#505050" stroke="#888" stroke-width="1.5"/>
+  <text x="200" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#e0e0e0">Backlog</text>
+  
+  <!-- Builder Iteration box -->
+  <rect x="140" y="290" width="120" height="50" rx="4" fill="#404040" stroke="#888" stroke-width="1.5"/>
+  <text x="200" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#e0e0e0">Builder Iteration</text>
+  
+  <!-- Arrow from Backlog to Builder Iteration -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#888"/>
+    </marker>
+  </defs>
+  <line x1="200" y1="202" x2="200" y2="285" stroke="#888" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <text x="255" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#aaa">fetches task</text>
+  
+  <!-- Self-loop arrow for transforms code -->
+  <path d="M 260 315 C 320 315, 320 390, 200 390 C 80 390, 80 315, 135 315" fill="none" stroke="#888" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <text x="200" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#aaa">transforms code</text>
+</svg>
