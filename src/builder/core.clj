@@ -146,46 +146,40 @@
   (println "Running Claude (JSON mode) with model:" model)
   (let [plugin-dir (builder-root)
         output-keys (map name produces)
-        augmented-prompt (str prompt
-                              "\n\nReturn your response as JSON with these keys: "
-                              (str/join ", " output-keys)
-                              "\nEach key should contain the full content for that document.")]
+        json-schema (json/generate-string
+                     {:type "object"
+                      :properties (into {} (map (fn [k] [k {:type "string"}]) output-keys))
+                      :required (vec output-keys)})]
     (log-to-file (str "### Plugin dir: " plugin-dir))
     (log-to-file (str "### Model: " model))
+    (log-to-file (str "### JSON schema: " json-schema))
     (log-to-file "### Sending the following prompt to Claude (JSON mode):")
-    (log-to-file augmented-prompt)
+    (log-to-file prompt)
     (log-to-file "### End of prompt\n")
     (let [result (babashka.process/shell
                   {:out :string}
-                  "claude" "-p" augmented-prompt
+                  "claude" "-p" prompt
                   "--output-format" "json"
+                  "--json-schema" json-schema
                   "--plugin-dir" plugin-dir
                   "--model" model)
           parsed (json/parse-string (:out result) true)
-          response-text (or (:result parsed) (:content parsed) "")]
+          content-json (:structured_output parsed)]
       (log-to-file (str "### Claude JSON response: " (:out result)))
-      (let [json-match (re-find #"(?s)```json\s*(.*?)\s*```" response-text)
-            content-json (if json-match
-                           (json/parse-string (second json-match) true)
-                           (try
-                             (json/parse-string response-text true)
-                             (catch Exception _
-                               (println "Warning: Could not parse response as JSON, trying to extract...")
-                               nil)))]
-        (if content-json
-          (doseq [doc-key produces]
-            (let [k (keyword (name doc-key))
-                  content (get content-json k)
-                  path (doc-path doc-key)]
-              (if content
-                (do
-                  (println "Writing" path)
-                  (log-to-file (str "### JSON output: writing key '" (name k) "' to " path))
-                  (spit path content))
-                (log-to-file (str "### JSON output: key '" (name k) "' not found in response")))))
-          (do
-            (println "Error: Failed to parse JSON from Claude response")
-            (log-to-file "### JSON output: ERROR - Failed to parse JSON from Claude response")))))))
+      (if content-json
+        (doseq [doc-key produces]
+          (let [k (keyword (name doc-key))
+                content (get content-json k)
+                path (doc-path doc-key)]
+            (if content
+              (do
+                (println "Writing" path)
+                (log-to-file (str "### JSON output: writing key '" (name k) "' to " path))
+                (spit path content))
+              (log-to-file (str "### JSON output: key '" (name k) "' not found in response")))))
+        (do
+          (println "Error: No structured_output in Claude response")
+          (log-to-file "### JSON output: ERROR - No structured_output in Claude response"))))))
 
 (defn start-app []
   (println "Starting app...")
