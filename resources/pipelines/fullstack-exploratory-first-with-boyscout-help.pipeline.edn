@@ -41,7 +41,9 @@ Since this feature is small, use the saved cycles to give the boyscout extra roo
 
 ---
 
-If the feature is NOT small (medium or large), use the original content unchanged."}
+If the feature is NOT small (medium or large), use the original content unchanged.
+
+Output the resulting document as `next-feature` in your JSON response."}
 
   {:id :exploratory-implementation
    :requires [:next-feature]
