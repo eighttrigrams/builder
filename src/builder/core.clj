@@ -97,8 +97,15 @@
       (when (fs/exists? path)
         (fs/delete path)))))
 
+(defn log-file [] (:log-file *config*))
+
+(defn timestamp []
+  (let [fmt (java.text.SimpleDateFormat. "yyyy-MM-dd HH:mm:ss")]
+    (.format fmt (java.util.Date.))))
+
 (defn log-to-file [msg]
-  (spit "hooks.log" (str msg "\n") :append true))
+  (when-let [f (log-file)]
+    (spit f (str (timestamp) " - " msg "\n") :append true)))
 
 (defn builder-root []
   (-> (io/resource "pipelines")
@@ -139,9 +146,6 @@
   (println "Running Claude (JSON mode) with model:" model)
   (let [plugin-dir (builder-root)
         output-keys (map name produces)
-        json-schema {:type "object"
-                     :properties (into {} (map (fn [k] [k {:type "string"}]) output-keys))
-                     :required output-keys}
         augmented-prompt (str prompt
                               "\n\nReturn your response as JSON with these keys: "
                               (str/join ", " output-keys)
@@ -171,11 +175,17 @@
         (if content-json
           (doseq [doc-key produces]
             (let [k (keyword (name doc-key))
-                  content (get content-json k)]
-              (when content
-                (println "Writing" (doc-path doc-key))
-                (spit (doc-path doc-key) content))))
-          (println "Error: Failed to parse JSON from Claude response"))))))
+                  content (get content-json k)
+                  path (doc-path doc-key)]
+              (if content
+                (do
+                  (println "Writing" path)
+                  (log-to-file (str "### JSON output: writing key '" (name k) "' to " path))
+                  (spit path content))
+                (log-to-file (str "### JSON output: key '" (name k) "' not found in response")))))
+          (do
+            (println "Error: Failed to parse JSON from Claude response")
+            (log-to-file "### JSON output: ERROR - Failed to parse JSON from Claude response")))))))
 
 (defn start-app []
   (println "Starting app...")
