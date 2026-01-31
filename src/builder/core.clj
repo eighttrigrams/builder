@@ -142,27 +142,30 @@
     (log-to-file "### End of prompt\n")
     (shell "claude" "-p" prompt "--allowedTools" "Write" "--plugin-dir" plugin-dir "--model" model)))
 
-(defn run-claude-json [prompt model produces]
+(defn run-claude-json [prompt model produces allowed-tools]
   (println "Running Claude (JSON mode) with model:" model)
   (let [plugin-dir (builder-root)
         output-keys (map name produces)
         json-schema (json/generate-string
                      {:type "object"
                       :properties (into {} (map (fn [k] [k {:type "string"}]) output-keys))
-                      :required (vec output-keys)})]
+                      :required (vec output-keys)})
+        base-args ["claude" "-p" prompt
+                   "--output-format" "json"
+                   "--json-schema" json-schema
+                   "--plugin-dir" plugin-dir
+                   "--model" model]
+        args (if allowed-tools
+               (into base-args ["--allowedTools" allowed-tools])
+               base-args)]
     (log-to-file (str "### Plugin dir: " plugin-dir))
     (log-to-file (str "### Model: " model))
+    (log-to-file (str "### Allowed tools: " (or allowed-tools "none")))
     (log-to-file (str "### JSON schema: " json-schema))
     (log-to-file "### Sending the following prompt to Claude (JSON mode):")
     (log-to-file prompt)
     (log-to-file "### End of prompt\n")
-    (let [result (babashka.process/shell
-                  {:out :string}
-                  "claude" "-p" prompt
-                  "--output-format" "json"
-                  "--json-schema" json-schema
-                  "--plugin-dir" plugin-dir
-                  "--model" model)
+    (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)]
       (log-to-file (str "### Claude JSON response: " (:out result)))
@@ -268,7 +271,7 @@
     (when prompt
       (let [model (or (:model stage) (:model ctx))]
         (if (:json-output? stage)
-          (run-claude-json (build-prompt stage ctx) model (:produces stage))
+          (run-claude-json (build-prompt stage ctx) model (:produces stage) (:allowed-tools stage))
           (run-claude (build-prompt stage ctx) model))))
 
     (check-produces stage)
