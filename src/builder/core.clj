@@ -3,7 +3,8 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [babashka.process :refer [shell process]]
-            [babashka.fs :as fs]))
+            [babashka.fs :as fs]
+            [cheshire.core :as json]))
 
 (def ^:dynamic *config* nil)
 
@@ -134,6 +135,48 @@
     (log-to-file "### End of prompt\n")
     (shell "claude" "-p" prompt "--allowedTools" "Write" "--plugin-dir" plugin-dir "--model" model)))
 
+(defn run-claude-json [prompt model produces]
+  (println "Running Claude (JSON mode) with model:" model)
+  (let [plugin-dir (builder-root)
+        output-keys (map name produces)
+        json-schema {:type "object"
+                     :properties (into {} (map (fn [k] [k {:type "string"}]) output-keys))
+                     :required output-keys}
+        augmented-prompt (str prompt
+                              "\n\nReturn your response as JSON with these keys: "
+                              (str/join ", " output-keys)
+                              "\nEach key should contain the full content for that document.")]
+    (log-to-file (str "### Plugin dir: " plugin-dir))
+    (log-to-file (str "### Model: " model))
+    (log-to-file "### Sending the following prompt to Claude (JSON mode):")
+    (log-to-file augmented-prompt)
+    (log-to-file "### End of prompt\n")
+    (let [result (babashka.process/shell
+                  {:out :string}
+                  "claude" "-p" augmented-prompt
+                  "--output-format" "json"
+                  "--plugin-dir" plugin-dir
+                  "--model" model)
+          parsed (json/parse-string (:out result) true)
+          response-text (or (:result parsed) (:content parsed) "")]
+      (log-to-file (str "### Claude JSON response: " (:out result)))
+      (let [json-match (re-find #"(?s)```json\s*(.*?)\s*```" response-text)
+            content-json (if json-match
+                           (json/parse-string (second json-match) true)
+                           (try
+                             (json/parse-string response-text true)
+                             (catch Exception _
+                               (println "Warning: Could not parse response as JSON, trying to extract...")
+                               nil)))]
+        (if content-json
+          (doseq [doc-key produces]
+            (let [k (keyword (name doc-key))
+                  content (get content-json k)]
+              (when content
+                (println "Writing" (doc-path doc-key))
+                (spit (doc-path doc-key) content))))
+          (println "Error: Failed to parse JSON from Claude response"))))))
+
 (defn start-app []
   (println "Starting app...")
   (shell "make" "stop")
@@ -220,7 +263,9 @@
 
     (when prompt
       (let [model (or (:model stage) (:model ctx))]
-        (run-claude (build-prompt stage ctx) model)))
+        (if (:json-output? stage)
+          (run-claude-json (build-prompt stage ctx) model (:produces stage))
+          (run-claude (build-prompt stage ctx) model))))
 
     (check-produces stage)
 

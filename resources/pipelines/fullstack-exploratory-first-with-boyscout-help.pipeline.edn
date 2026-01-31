@@ -5,7 +5,7 @@
 
  :documents
  {:next-feature                    {:file "NEXT_FEATURE.md"}
-  :exploratory-implementers-complaints           {:file "EXPLORATORY_IMPLEMENTERS_COMPLAINTS.md"}
+  :exploratory-implementers-complaints {:file "EXPLORATORY_IMPLEMENTERS_COMPLAINTS.md"}
   :exploratory-justification       {:file "EXPLORATORY_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
   :exploratory-diff                {:file "EXPLORATORY_DIFF.txt"}
   :pr-architecture-review          {:file "PR_ARCHITECTURE_REVIEW_RESULT.md"}
@@ -23,6 +23,7 @@
  [{:id :enrich-feature
    :requires [:next-feature]
    :produces [:next-feature]
+   :json-output? true
    :prompt "Read the feature description carefully.
 
 Assess whether this is a **small feature** - meaning it would likely:
@@ -30,7 +31,7 @@ Assess whether this is a **small feature** - meaning it would likely:
 - Require minimal logic changes
 - Be completed in under 30 lines of code changes
 
-If the feature IS small, append the following section to the file:
+If the feature IS small, take the original content and append this section:
 
 ---
 
@@ -40,9 +41,7 @@ Since this feature is small, use the saved cycles to give the boyscout extra roo
 
 ---
 
-If the feature is NOT small (medium or large), do NOT modify the file at all.
-
-Write your result to {{next-feature}}."}
+If the feature is NOT small (medium or large), use the original content unchanged."}
 
   {:id :exploratory-implementation
    :requires [:next-feature]
