@@ -202,13 +202,15 @@ Report what you did in {{boyscout-report}}"}
    :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
    :produces [:feature-justification]
    :run-tests? true
-   :commit {:message "Implementation"} 
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
+   :commit {:message "Implementation"}
    :prompt "Now implement the feature properly, according to the implementation plan!
 Make sure to use the UI skill to watch your implementation results live in the browser.
 
 Make sure tests run (`make test`)
 
-Report what you did in {{feature-justification}}"}
+In your JSON response, output `feature-justification` with what you did and why."}
 
   {:id :final-review
    :requires [:feature-justification]
