@@ -2,8 +2,9 @@
  :deps {}
  :tasks {test {:extra-paths ["test"]
                :requires ([clojure.test :as t]
-                          [builder.core-test])
-               :task (let [result (t/run-tests 'builder.core-test)]
+                          [builder.core-test]
+                          [builder.detect-duplicates-test])
+               :task (let [result (t/run-tests 'builder.core-test 'builder.detect-duplicates-test)]
                        (System/exit (if (and (zero? (:fail result))
                                              (zero? (:error result)))
                                       0 1)))}
@@ -12,4 +13,5 @@
                            (core/load-config! (first *command-line-args*))
                            (println "Pipeline valid."))}}
  :bbin/bin {builder {:main-opts ["-m" "builder.core"]}
-            builder-mermaid {:main-opts ["-m" "builder.mermaid"]}}}
+            builder-mermaid {:main-opts ["-m" "builder.mermaid"]}
+            detect-duplicates {:main-opts ["-m" "builder.detect-duplicates"]}}}
