@@ -3,6 +3,11 @@ name: security-review
 description: Security review guidance. Use when reviewing code for security vulnerabilities, assessing authentication/authorization, or evaluating data handling.
 ---
 
+Report ONLY when you found something concerning and then report what you found.
+If you didn't find anything, don't report it. Mention only things you actually found.
+Don't "check off" certain points here by saying "passed" this or that point. 
+I assume when you didn't mention an aspect that is precisely because it PASSED.
+
 # Security Review
 
 - Data leaks? Can outsiders see user data? Can users accidentally see each others' data?
