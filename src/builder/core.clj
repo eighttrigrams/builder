@@ -204,7 +204,13 @@
   (loop []
     (print "Type 'ok' to proceed: ")
     (flush)
-    (when (not= "ok" (str/trim (read-line)))
+    (if (= "ok" (str/trim (read-line)))
+      (let [missing (filter #(not (file-valid? (doc-path %))) produces)]
+        (if (seq missing)
+          (do
+            (println "Missing/empty:" (str/join ", " (map #(doc-path %) missing)))
+            (recur))
+          :done))
       (recur))))
 
 (defn git-commit [message commit-message-prefix]
