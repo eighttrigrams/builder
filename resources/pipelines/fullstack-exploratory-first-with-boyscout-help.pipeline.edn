@@ -15,7 +15,7 @@
   :boyscout-observations           {:file "BOYSCOUT_OBSERVATIONS.md"}
   :boyscout-plan                   {:file "BOYSCOUT_PLAN.md"}
   :implementation-plan             {:file "IMPLEMENTATION_PLAN.md"}
-  :human-opinion                   {:file "HUMAN_OPINION.md" :allow-single-line? true}
+  :human-opinion                   {:file "HUMAN_OPINION.md"}
   :boyscout-report                 {:file "BOYSCOUT_REPORT.md"}
   :feature-justification           {:file "FEATURE_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
   :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}}

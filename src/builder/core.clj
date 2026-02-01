@@ -38,9 +38,6 @@
 (defn doc-path [doc-key]
   (str (docs-dir) "/" (:file (get (documents) doc-key))))
 
-(defn doc-allow-single-line? [doc-key]
-  (:allow-single-line? (get (documents) doc-key)))
-
 (defn interpolate [template ctx]
   (reduce-kv
    (fn [s k v]
@@ -49,30 +46,23 @@
    (merge ctx
           (into {} (map (fn [[k _]] [k (doc-path k)]) (documents))))))
 
-(defn file-valid?
-  ([path] (file-valid? path false))
-  ([path allow-single-line?]
-   (and (fs/exists? path)
-        (let [lines (count (str/split-lines (slurp path)))]
-          (if allow-single-line?
-            (>= lines 1)
-            (> lines 1))))))
+(defn file-valid? [path]
+  (and (fs/exists? path)
+       (not (str/blank? (slurp path)))))
 
 (defn check-requires [{:keys [requires]}]
   (when requires
     (doseq [doc-key requires]
-      (let [path (doc-path doc-key)
-            allow-single? (doc-allow-single-line? doc-key)]
-        (when-not (file-valid? path allow-single?)
+      (let [path (doc-path doc-key)]
+        (when-not (file-valid? path)
           (println "Error: Required document" path "not found or empty.")
           (System/exit 1))))))
 
 (defn check-produces [{:keys [produces]}]
   (when produces
     (doseq [doc-key produces]
-      (let [path (doc-path doc-key)
-            allow-single? (doc-allow-single-line? doc-key)]
-        (when-not (file-valid? path allow-single?)
+      (let [path (doc-path doc-key)]
+        (when-not (file-valid? path)
           (println "Error: Expected output" path "not found or empty.")
           (System/exit 1))))))
 
