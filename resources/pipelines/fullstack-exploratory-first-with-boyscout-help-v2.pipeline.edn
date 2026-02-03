@@ -289,10 +289,10 @@ Identify any issues that require fixing before deployment. Focus on:
 - Architectural issues that could cause bugs
 - Failed tests or bugs found during testing
 
-If there are NO concerning issues, output an empty string for repair-tasks.
-If there ARE issues to fix, list them as actionable repair tasks.
 
-In your JSON response, output `repair-tasks` with the list of issues to fix (or empty string if none)."}
+In your JSON response, output `repair-tasks` with the list of issues to fix. 
+- If there ARE issues to fix, list them as actionable repair tasks.
+- If there happen to be NO tasks to do at all for the repair, state that explicitly and clearly. The repair crew wants that clearly stated so they need not wonder."}
 
   {:id :repair-crew
    :requires [:repair-tasks :feature-justification]
