@@ -214,10 +214,16 @@
           :done))
       (recur))))
 
+(defn has-changes-to-commit? []
+  (let [result (babashka.process/shell {:out :string} "git" "status" "--porcelain")]
+    (not (str/blank? (:out result)))))
+
 (defn git-commit [message commit-message-prefix]
   (shell "git" "add" ".")
   (shell "git" "reset" "HEAD" "--" (str (docs-dir) "/"))
-  (shell "git" "commit" "-m" (str commit-message-prefix " - " message)))
+  (if (has-changes-to-commit?)
+    (shell "git" "commit" "-m" (str commit-message-prefix " - " message))
+    (println "No changes to commit, skipping.")))
 
 (defn git-amend-commit [commit-message-prefix]
   (let [body (when (fs/exists? (doc-path :commit-message-body))
