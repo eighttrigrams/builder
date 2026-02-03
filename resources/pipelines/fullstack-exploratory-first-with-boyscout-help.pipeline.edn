@@ -71,7 +71,7 @@ In your JSON response, output `exploratory-justification` with your explanation 
   {:id :capture-exploratory-diff
    :requires [:exploratory-justification]
    :produces [:exploratory-diff]
-   :shell "git diff -U10"
+   :shell "git diff -U10 -- . ':!{{docs-dir}}'"
    :shell-output :exploratory-diff}
 
   {:id :code-smell-detection

@@ -12,6 +12,7 @@
   :verdict                         {:file "VERDICT.md"}
   :deployment-verdict              {:file "DEPLOYMENT_VERDICT.md"}
   :final-diff                      {:file "FINAL_DIFF.txt"}
+  :testing-result                  {:file "TESTING_RESULT.md"}
   :pr-architecture-review          {:file "PR_ARCHITECTURE_REVIEW_RESULT.md"}
   :pr-data-consistency-review      {:file "PR_DATA_CONSISTENCY_REVIEW_RESULT.md"}
   :pr-security-review              {:file "PR_SECURITY_REVIEW_RESULT.md"}
@@ -73,7 +74,7 @@ In your JSON response, output `exploratory-justification` with your explanation 
 
   {:id :capture-exploratory-diff
    :produces [:exploratory-diff]
-   :shell "git diff -U10"
+   :shell "git diff -U10 -- . ':!{{docs-dir}}'"
    :shell-output :exploratory-diff}
 
   {:id :judge
@@ -85,6 +86,8 @@ In your JSON response, output `exploratory-justification` with your explanation 
 - The diff in {{exploratory-diff}}
 
 Determine whether the exploratory implementation fulfills the stated requirements.
+
+Also, given the states requirements and the justification how they are met, verify the claims and check if the requirements are actually met, using the UI development skill, using the browser with playwright.
 
 Write your verdict to {{verdict}}, including:
 - Whether the requirements are met (yes/no/partially)
@@ -208,7 +211,7 @@ In your JSON response, output `feature-justification` with what you did and why.
 
   {:id :capture-final-diff
    :produces [:final-diff]
-   :shell "git diff HEAD~2..HEAD -U5"
+   :shell "git diff HEAD~2..HEAD -U5 -- . ':!{{docs-dir}}'"
    :shell-output :final-diff}
 
   {:id :architecture-review
@@ -235,14 +238,32 @@ Write findings to {{pr-data-consistency-review}}."}
    :prompt "Review the final implementation.
 Write findings to {{pr-security-review}}."}
 
+  {:id :manual-testing
+   :requires [:next-feature :feature-justification]
+   :requires-commits [:boyscout-refactoring :implementation]
+   :produces [:testing-result]
+   :start-app? true
+   :prompt "Test the implemented feature in the browser.
+
+Read the original feature description in {{next-feature}} and verify each requirement is met.
+
+Use the UI skill to interact with the application in the browser via playwright and take screenshots as evidence.
+
+Write your testing result to {{testing-result}}, including:
+- Each requirement from the feature description and whether it passes
+- Screenshots taken (prefix names with .playwright-mcp/)
+- Any bugs or unexpected behavior found
+- Overall assessment: all tests pass / some failures / major issues"}
+
   {:id :final-judge
-   :requires [:next-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff]
+   :requires [:next-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff :testing-result]
    :produces [:deployment-verdict]
    :prompt "You are the final judge. Review:
 - The original feature request in {{next-feature}}
 - The human's earlier opinion in {{human-opinion}}
 - What was implemented in {{feature-justification}}
 - The actual code changes in {{final-diff}}
+- Manual testing results in {{testing-result}}
 - Architecture review in {{pr-architecture-review}}
 - Data consistency review in {{pr-data-consistency-review}}
 - Security review in {{pr-security-review}}
@@ -268,7 +289,7 @@ Write your verdict to {{deployment-verdict}}, including:
    :requires-pseudo [:human-ok]
    :produces [:commit-message-body]
    :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
-                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff]
+                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff :testing-result]
    :prompt "Write a commit message body summarizing what was done and why.
 Output ONLY the commit message body (no subject line, no markdown fences).
 Write the result to {{commit-message-body}}"}
