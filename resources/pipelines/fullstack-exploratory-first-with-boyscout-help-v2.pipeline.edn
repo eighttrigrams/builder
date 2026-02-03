@@ -1,0 +1,280 @@
+{:standard-fullstack? true
+ :docs-dir "build-next-feature"
+ :log-file "hooks.log"
+
+ :seed-artifacts [:next-feature]
+
+ :documents
+ {:next-feature                    {:file "NEXT_FEATURE.md"}
+  :exploratory-implementers-complaints {:file "EXPLORATORY_IMPLEMENTERS_COMPLAINTS.md"}
+  :exploratory-justification       {:file "EXPLORATORY_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
+  :exploratory-diff                {:file "EXPLORATORY_DIFF.txt"}
+  :verdict                         {:file "VERDICT.md"}
+  :deployment-verdict              {:file "DEPLOYMENT_VERDICT.md"}
+  :final-diff                      {:file "FINAL_DIFF.txt"}
+  :pr-architecture-review          {:file "PR_ARCHITECTURE_REVIEW_RESULT.md"}
+  :pr-data-consistency-review      {:file "PR_DATA_CONSISTENCY_REVIEW_RESULT.md"}
+  :pr-security-review              {:file "PR_SECURITY_REVIEW_RESULT.md"}
+  :boyscout-observations           {:file "BOYSCOUT_OBSERVATIONS.md"}
+  :boyscout-plan                   {:file "BOYSCOUT_PLAN.md"}
+  :implementation-plan             {:file "IMPLEMENTATION_PLAN.md"}
+  :human-opinion                   {:file "HUMAN_OPINION.md"}
+  :boyscout-report                 {:file "BOYSCOUT_REPORT.md"}
+  :feature-justification           {:file "FEATURE_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
+  :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}}
+
+ :stages
+ [{:id :enrich-feature
+   :requires [:next-feature]
+   :produces [:next-feature]
+   :json-output? true
+   :prompt "Read the feature description carefully.
+
+Assess whether this is a **small feature** - meaning it would likely:
+- Touch only 1-2 files
+- Require minimal logic changes
+- Be completed in under 30 lines of code changes
+
+If the feature IS small, take the original content and append this section:
+
+---
+
+## Boyscout Guidance
+
+Since this feature is small, use the saved cycles to give the boyscout extra room for cleanup. During the boyscout phase, go beyond the minimum - look for nearby code smells, minor refactorings, and small improvements in the areas you touch. Don't go overboard, but make good use of the time.
+
+---
+
+If the feature is NOT small (medium or large), use the original content unchanged.
+
+Output the resulting document as `next-feature` in your JSON response."}
+
+  {:id :exploratory-implementation
+   :requires [:next-feature]
+   :produces [:exploratory-implementers-complaints :exploratory-justification]
+   :run-tests? true
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
+   :prompt "We are building a new feature {{feature-name}}.
+
+1. Implement the feature.
+  - if it touches the user interface (which is almost always the case)
+    - use a skill
+    - take screenshots for proof of important key aspects
+2. Make sure you get the unit tests running (`make test`)
+3. Now that you have an implementation which matches the specification of the new feature handed to you, consider the following: What things did you encounter which caused
+  you extra work which wouldnt otherwise have occurred where the code structured in a cleaner way?
+    - Make sure absolutely nothing specifically pertaining to the new feature goes here. For the purpose of that report, we care about the state of the codebase we found, pretending we dont know what we build next. You only report what you thought made things difficult, and you run in unnecessary loops and through unnecessary hoops, which you wouldnt have to, if things were nice and tidy.
+4. Explain how what you have done matches what was asked of you.
+    - If you have taken screenshots, list names of screenshots (prefix the names with where they are stored, namely .playwright-mcp/)
+
+In your JSON response, output `exploratory-implementers-complaints` with your findings from step 3.
+In your JSON response, output `exploratory-justification` with your explanation from step 4."}
+
+  {:id :capture-exploratory-diff
+   :produces [:exploratory-diff]
+   :shell "git diff -U10"
+   :shell-output :exploratory-diff}
+
+  {:id :judge
+   :requires [:next-feature :exploratory-justification :exploratory-diff]
+   :produces [:verdict]
+   :prompt "You are the judge. Review:
+- The feature requirements in {{next-feature}}
+- The justification in {{exploratory-justification}}
+- The diff in {{exploratory-diff}}
+
+Determine whether the exploratory implementation fulfills the stated requirements.
+
+Write your verdict to {{verdict}}, including:
+- Whether the requirements are met (yes/no/partially)
+- What was done well
+- What is missing or could be improved
+- Any concerns about the approach"}
+
+  {:id :human-review
+   :requires [:verdict :exploratory-diff :exploratory-justification]
+   :produces [:human-opinion]
+   :human-input? true
+   :start-app? true
+   :message "Please human, review the verdict in {{verdict}} and add your opinion in {{human-opinion}} (note that the app is up at {{port}})"}
+
+  {:id :code-smell-detection
+   :requires [:exploratory-diff]
+   :produces [:boyscout-observations]
+   :prompt "Look at the exploratory diff in {{exploratory-diff}}.
+
+  For each changed file, also look at surrounding context
+  - the function which was touched
+  - if not too big, the namespace which was touched
+  - caller functions of the function touched
+  - called function from the function touched
+
+  ## What to look for
+
+  Identify code smells such as:
+  - Long functions (more than ~15 lines)
+  - Long require/import lists
+  - Deeply nested code
+  - Duplicated code patterns
+  - Poor naming
+  - Large files
+
+  ## Clojure specific things
+
+  In Clojure, calling a private function inside a namespace needs the called function to be defined
+  above the call-site inside the sourcefile. Try to optimize a little for defining private functions
+  as close as possible to the call-site. Here, one cannot \"jump\" over another function which also uses
+  the same function (which is why I said as close \"as possible\").
+
+  # Important
+
+  Focus ONLY on the areas touched by the diff, not the entire codebase.
+  Do NOT include anything specific to the new feature - only pre-existing smells that were exposed.
+
+  Be assertive, and if something is a pre-existing condition, then this is exactly the right thing for you to look at.
+
+  Write your findings to {{boyscout-observations}}."}
+
+  {:id :planning
+   :requires [:exploratory-implementers-complaints
+              :next-feature
+              :exploratory-diff
+              :verdict
+              :human-opinion
+              :boyscout-observations]
+   :produces [:boyscout-plan :implementation-plan]
+   :prompt "Review the exploratory diff in {{exploratory-diff}}.
+
+## High level - what we gonna do
+
+From the verdict, human opinion, and all what you know NOW, write
+- {{boyscout-plan}}
+- {{implementation-plan}}.
+
+We will execute the new implementation in two phases,
+1. the cleanup phase done by a boyscout,
+2. and then the proper implementation.
+
+## Info on the plan files to write
+
+We dont want to repeat things, so any item goes either to the boyscout plan
+or to to the implementation plan but not to both.
+
+### Boyscout plan
+
+Take especially seriously what you learned from {{exploratory-implementers-complaints}} and {{boyscout-observations}}.
+
+Note that soon we will discard the exploratory changes.
+So the cleanup will be performed against the sources as they appeared in main branch.
+Dont put anything specific to our feature in the preparatory boyscout plan. Just make it
+nicer for the things which go to the proper implementation. I repeat: Absolutely **nothing
+pertaining to the feature** we are about to build goes into {{boyscout-plan}}.
+
+### Implementation plan
+
+For the proper implementation, then
+- Pick mostly high and medium issues from the todos.
+- Be specific which files the implementer should touch on this next, better attempt"}
+
+  {:id :revert
+   :requires [:implementation-plan]
+   :git-restore? true}
+
+  {:id :boyscout-refactoring
+   :requires [:boyscout-plan :human-opinion]
+   :produces [:boyscout-report]
+   :run-tests? true
+   :commit {:message "Preparatory refactoring"}
+   :prompt "Now implement the boyscout plan!
+
+Make sure tests run (`make test`)
+
+Report what you did in {{boyscout-report}}"}
+
+  {:id :implementation
+   :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
+   :produces [:feature-justification]
+   :run-tests? true
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
+   :commit {:message "Implementation"}
+   :prompt "Now implement the feature properly, according to the implementation plan!
+Make sure to use the UI skill to watch your implementation results live in the browser.
+
+Make sure tests run (`make test`)
+
+In your JSON response, output `feature-justification` with what you did and why."}
+
+  {:id :capture-final-diff
+   :produces [:final-diff]
+   :shell "git diff HEAD~2..HEAD -U5"
+   :shell-output :final-diff}
+
+  {:id :architecture-review
+   :requires [:feature-justification]
+   :requires-commits [:boyscout-refactoring :implementation]
+   :produces [:pr-architecture-review]
+   :skill "skills/architecture-review/SKILL.md"
+   :prompt "Review the final implementation.
+Write findings to {{pr-architecture-review}}."}
+
+  {:id :data-consistency-review
+   :requires [:feature-justification]
+   :requires-commits [:boyscout-refactoring :implementation]
+   :produces [:pr-data-consistency-review]
+   :skill "skills/data-consistency-review/SKILL.md"
+   :prompt "Review the final implementation.
+Write findings to {{pr-data-consistency-review}}."}
+
+  {:id :security-review
+   :requires [:feature-justification]
+   :requires-commits [:boyscout-refactoring :implementation]
+   :produces [:pr-security-review]
+   :skill "skills/security-review/SKILL.md"
+   :prompt "Review the final implementation.
+Write findings to {{pr-security-review}}."}
+
+  {:id :final-judge
+   :requires [:next-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff]
+   :produces [:deployment-verdict]
+   :prompt "You are the final judge. Review:
+- The original feature request in {{next-feature}}
+- The human's earlier opinion in {{human-opinion}}
+- What was implemented in {{feature-justification}}
+- The actual code changes in {{final-diff}}
+- Architecture review in {{pr-architecture-review}}
+- Data consistency review in {{pr-data-consistency-review}}
+- Security review in {{pr-security-review}}
+
+Determine whether this implementation is good to deploy.
+
+Write your verdict to {{deployment-verdict}}, including:
+- Whether the feature requirements are fully met
+- Summary of any issues raised in the reviews
+- Your recommendation: deploy / deploy with caveats / do not deploy
+- Any final observations"}
+
+  {:id :final-review
+   :requires [:deployment-verdict]
+   :human-input? true
+   :start-app? true
+   :stop-app? true
+   :produces-pseudo [:human-ok]
+   :message "Human, please visit the app in a browser, and also check the changes. Everything ok?"}
+
+  {:id :synthesize-commit
+   :requires [:next-feature :feature-justification]
+   :requires-pseudo [:human-ok]
+   :produces [:commit-message-body]
+   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
+                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff]
+   :prompt "Write a commit message body summarizing what was done and why.
+Output ONLY the commit message body (no subject line, no markdown fences).
+Write the result to {{commit-message-body}}"}
+
+  {:id :finalize
+   :requires [:commit-message-body]
+   :amend-commit? true
+   :cleanup-after [:commit-message-body :feature-justification]
+   :clear-next-feature? true}]}
