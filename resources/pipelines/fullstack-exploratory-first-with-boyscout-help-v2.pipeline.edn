@@ -87,7 +87,8 @@ In your JSON response, output `exploratory-justification` with your explanation 
 
 Determine whether the exploratory implementation fulfills the stated requirements.
 
-Also, given the states requirements and the justification how they are met, verify the claims and check if the requirements are actually met, using the UI development skill, using the browser with playwright.
+Also, given the states requirements and the justification how they are met, verify the claims and check if the requirements are actually met, 
+using the UI development skill, using the browser with playwright. Don't close the browser afterwards.
 
 Write your verdict to {{verdict}}, including:
 - Whether the requirements are met (yes/no/partially)
@@ -99,7 +100,7 @@ Write your verdict to {{verdict}}, including:
    :requires [:verdict :exploratory-diff :exploratory-justification]
    :produces [:human-opinion]
    :human-input? true
-   :start-app? true
+  ;;  :start-app? true
    :message "Please human, review the verdict in {{verdict}} and add your opinion in {{human-opinion}} (note that the app is up at {{port}})"}
 
   {:id :code-smell-detection
