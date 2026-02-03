@@ -312,7 +312,7 @@ Otherwise, fix each issue listed. Make sure:
 - Changes are minimal and targeted to the specific issues
 - You don't break existing functionality
 
-In your JSON response, output `repair-report` with what you fixed (or 'No repairs needed' if repair-tasks was empty)."}
+In your JSON response, output `repair-report` with what you fixed (or 'No repairs needed' if repair-tasks was empty; make sure to at least write *something* to report back!)"}
 
   {:id :repair-judge
    :requires [:repair-tasks :repair-report :pr-architecture-review :pr-data-consistency-review :pr-security-review]
