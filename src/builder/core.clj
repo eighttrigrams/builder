@@ -44,6 +44,7 @@
      (str/replace s (str "{{" (name k) "}}") v))
    template
    (merge ctx
+          {:docs-dir (docs-dir)}
           (into {} (map (fn [[k _]] [k (doc-path k)]) (documents))))))
 
 (defn file-valid? [path]
@@ -230,9 +231,10 @@
   (shell "git" "add" ".")
   (shell "git" "commit" "--amend" "--no-edit"))
 
-(defn run-shell-stage [{:keys [shell shell-output]}]
+(defn run-shell-stage [{:keys [shell shell-output]} ctx]
   (when (and shell shell-output)
-    (let [result (babashka.process/shell {:out :string} shell)]
+    (let [cmd (interpolate shell ctx)
+          result (babashka.process/shell {:out :string} cmd)]
       (spit (doc-path shell-output) (:out result)))))
 
 (defn run-stage [stage ctx]
@@ -253,7 +255,7 @@
     (when git-restore?
       (shell "git" "restore" "."))
 
-    (run-shell-stage stage)
+    (run-shell-stage stage ctx)
 
     (when start-app?
       (start-app))
