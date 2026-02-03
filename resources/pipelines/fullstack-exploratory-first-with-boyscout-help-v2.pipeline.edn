@@ -81,6 +81,7 @@ In your JSON response, output `exploratory-justification` with your explanation 
    :requires [:next-feature :exploratory-justification :exploratory-diff]
    :produces [:verdict]
    :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :prompt "You are the judge. Review:
 - The feature requirements in {{next-feature}}
 - The justification in {{exploratory-justification}}
