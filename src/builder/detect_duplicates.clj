@@ -79,6 +79,58 @@
 (defn extract-structure [{:keys [params body]}]
   (normalize-form body params))
 
+(defn let-form? [form]
+  (and (list? form) (= 'let (first form))))
+
+(defn extract-let-bindings [form]
+  (when (let-form? form)
+    (let [bindings-vec (second form)]
+      (->> (partition 2 bindings-vec)
+           (map (fn [[name value]] {:name name :value value}))))))
+
+(defn normalize-for-let [form]
+  (if (and (list? form) (symbol? (first form)))
+    (let [fn-name (first form)
+          args (rest form)
+          sym-counter (atom 0)
+          sym-map (atom {})
+          normalize-part (fn normalize-part [x]
+                           (walk/postwalk
+                             (fn [x]
+                               (cond
+                                 (string? x) :STRING
+                                 (number? x) :NUMBER
+                                 (keyword? x) :KEYWORD
+                                 (symbol? x)
+                                 (if (special-forms x)
+                                   x
+                                   (if-let [mapped (@sym-map x)]
+                                     mapped
+                                     (let [new-sym (symbol (str "SYM" (swap! sym-counter inc)))]
+                                       (swap! sym-map assoc x new-sym)
+                                       new-sym)))
+                                 :else x))
+                             x))]
+      (cons fn-name (map normalize-part args)))
+    form))
+
+(defn find-let-duplicates [bindings]
+  (->> bindings
+       (map (fn [b] (assoc b :normalized (normalize-for-let (:value b)))))
+       (group-by :normalized)
+       (filter (fn [[_ group]] (>= (count group) 2)))
+       (into {})))
+
+(defn find-let-forms [form]
+  (let [results (atom [])]
+    (walk/postwalk
+      (fn [x]
+        (when (let-form? x)
+          (swap! results conj x))
+        x)
+      form)
+    @results))
+
 (defn find-structural-duplicates [defns]
   (->> defns
        (filter #(>= (count (:params %)) 2))
@@ -105,6 +157,24 @@
     (doseq [{:keys [name]} group]
       (println (str "    - " name)))))
 
+(defn report-let-duplicates [file defn-name duplicates]
+  (doseq [[_ group] duplicates]
+    (println (str "\n" file " [let-block in " defn-name "]:"))
+    (println "  Bindings with identical pattern:")
+    (doseq [{:keys [name]} group]
+      (println (str "    - " name)))))
+
+(defn analyze-let-duplicates [file forms]
+  (doseq [form forms]
+    (when (defn-form? form)
+      (let [defn-name (second form)
+            let-forms (find-let-forms form)]
+        (doseq [let-form let-forms]
+          (let [bindings (extract-let-bindings let-form)
+                duplicates (find-let-duplicates bindings)]
+            (when (seq duplicates)
+              (report-let-duplicates file defn-name duplicates))))))))
+
 (defn analyze-file [file]
   (let [forms (read-forms file)
         defns (->> forms
@@ -116,7 +186,8 @@
     (when (seq wrapper-groups)
       (report-wrapper-duplicates file wrapper-groups))
     (when (seq structural-groups)
-      (report-structural-duplicates file structural-groups))))
+      (report-structural-duplicates file structural-groups))
+    (analyze-let-duplicates file forms)))
 
 (defn find-clj-files [dir]
   (->> (file-seq (io/file dir))

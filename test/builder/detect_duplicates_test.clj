@@ -76,3 +76,34 @@
                  {:name 'bar :params '[y] :body '((inc y))}]
           groups (dd/find-structural-duplicates defns)]
       (is (empty? groups)))))
+
+(deftest extract-let-bindings-test
+  (testing "extracts bindings from let form"
+    (let [form '(let [a 1 b 2] (+ a b))
+          bindings (dd/extract-let-bindings form)]
+      (is (= 2 (count bindings)))
+      (is (= 'a (:name (first bindings))))
+      (is (= 1 (:value (first bindings))))))
+  (testing "returns nil for non-let forms"
+    (is (nil? (dd/extract-let-bindings '(defn foo [] 1))))))
+
+(deftest find-let-duplicates-test
+  (testing "finds duplicate patterns in let bindings"
+    (let [bindings [{:name 'people :value '(jdbc/execute! conn (sql/format {:from [:people]}) opts)}
+                    {:name 'places :value '(jdbc/execute! conn (sql/format {:from [:places]}) opts)}
+                    {:name 'goals :value '(jdbc/execute! conn (sql/format {:from [:goals]}) opts)}]]
+      (is (= 1 (count (dd/find-let-duplicates bindings))))))
+  (testing "no duplicates when patterns differ"
+    (let [bindings [{:name 'a :value '(foo 1)}
+                    {:name 'b :value '(bar 2)}]]
+      (is (empty? (dd/find-let-duplicates bindings))))))
+
+(deftest find-let-forms-test
+  (testing "finds let forms in defn body"
+    (let [form '(defn foo [x] (let [a 1 b 2] (+ a b)))
+          let-forms (dd/find-let-forms form)]
+      (is (= 1 (count let-forms)))))
+  (testing "finds nested let forms"
+    (let [form '(defn foo [x] (let [a (let [b 1] b)] a))
+          let-forms (dd/find-let-forms form)]
+      (is (= 2 (count let-forms))))))
