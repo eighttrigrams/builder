@@ -22,7 +22,10 @@
   :human-opinion                   {:file "HUMAN_OPINION.md"}
   :boyscout-report                 {:file "BOYSCOUT_REPORT.md"}
   :feature-justification           {:file "FEATURE_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
-  :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}}
+  :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}
+  :repair-tasks                    {:file "REPAIR_TASKS.md"}
+  :repair-report                   {:file "REPAIR_REPORT.md"}
+  :repair-verdict                  {:file "REPAIR_VERDICT.md"}}
 
  :stages
  [{:id :enrich-feature
@@ -220,11 +223,6 @@ Make sure tests run (`make test`)
 
 In your JSON response, output `feature-justification` with what you did and why."}
 
-  {:id :capture-final-diff
-   :produces [:final-diff]
-   :shell "git diff HEAD~2..HEAD -U5 -- . ':!{{docs-dir}}'"
-   :shell-output :final-diff}
-
   {:id :architecture-review
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
@@ -274,8 +272,74 @@ In your JSON response, output `testing-result` with:
 - Any bugs or unexpected behavior found
 - Overall assessment: all tests pass / some failures / major issues"}
 
+  {:id :triage-reviews
+   :requires [:pr-architecture-review :pr-data-consistency-review :pr-security-review :testing-result]
+   :produces [:repair-tasks]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
+   :prompt "Review the findings from the review phases:
+- Architecture review: {{pr-architecture-review}}
+- Data consistency review: {{pr-data-consistency-review}}
+- Security review: {{pr-security-review}}
+- Testing results: {{testing-result}}
+
+Identify any issues that require fixing before deployment. Focus on:
+- Security vulnerabilities
+- Data consistency problems
+- Architectural issues that could cause bugs
+- Failed tests or bugs found during testing
+
+If there are NO concerning issues, output an empty string for repair-tasks.
+If there ARE issues to fix, list them as actionable repair tasks.
+
+In your JSON response, output `repair-tasks` with the list of issues to fix (or empty string if none)."}
+
+  {:id :repair-crew
+   :requires [:repair-tasks :feature-justification]
+   :requires-commits [:boyscout-refactoring :implementation]
+   :produces [:repair-report]
+   :run-tests? true
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
+   :commit {:message "Repair fixes" :skip-if-empty :repair-tasks}
+   :prompt "Review the repair tasks:
+{{repair-tasks}}
+
+If the repair tasks are empty or indicate no repairs needed, simply report that no repairs were necessary.
+
+Otherwise, fix each issue listed. Make sure:
+- Tests still pass (`make test`)
+- Changes are minimal and targeted to the specific issues
+- You don't break existing functionality
+
+In your JSON response, output `repair-report` with what you fixed (or 'No repairs needed' if repair-tasks was empty)."}
+
+  {:id :repair-judge
+   :requires [:repair-tasks :repair-report :pr-architecture-review :pr-data-consistency-review :pr-security-review]
+   :produces [:repair-verdict]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
+   :prompt "You are the repair judge. Review:
+- The original issues identified: {{repair-tasks}}
+- What the repair crew did: {{repair-report}}
+
+If repair-tasks was empty, simply confirm no repairs were needed.
+
+Otherwise, determine whether the repair crew adequately addressed the concerns raised in the reviews.
+
+In your JSON response, output `repair-verdict` with:
+- Whether each issue was addressed (yes/no/partially)
+- Any remaining concerns
+- Overall assessment: repairs complete / repairs incomplete / no repairs needed"}
+
+  {:id :capture-final-diff
+   :requires [:repair-report]
+   :produces [:final-diff]
+   :shell "git diff main..HEAD -U5 -- . ':!{{docs-dir}}'"
+   :shell-output :final-diff}
+
   {:id :final-judge
-   :requires [:next-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff :testing-result]
+   :requires [:next-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff :testing-result :repair-tasks :repair-report :repair-verdict]
    :produces [:deployment-verdict]
    :json-output? true
    :allowed-tools "Write,Edit,Bash"
@@ -288,12 +352,16 @@ In your JSON response, output `testing-result` with:
 - Architecture review in {{pr-architecture-review}}
 - Data consistency review in {{pr-data-consistency-review}}
 - Security review in {{pr-security-review}}
+- Issues that needed repair: {{repair-tasks}}
+- What the repair crew did: {{repair-report}}
+- Repair verdict: {{repair-verdict}}
 
 Determine whether this implementation is good to deploy.
 
 In your JSON response, output `deployment-verdict` with:
 - Whether the feature requirements are fully met
 - Summary of any issues raised in the reviews
+- Whether repairs (if any) were adequate
 - Your recommendation: deploy / deploy with caveats / do not deploy
 - Any final observations"}
 
@@ -312,7 +380,8 @@ In your JSON response, output `deployment-verdict` with:
    :json-output? true
    :allowed-tools "Write,Edit,Bash"
    :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
-                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff :testing-result]
+                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff :testing-result
+                   :repair-tasks :repair-report :repair-verdict]
    :prompt "Write a commit message body summarizing what was done and why.
 Output ONLY the commit message body (no subject line, no markdown fences).
 In your JSON response, output `commit-message-body` with the result."}
