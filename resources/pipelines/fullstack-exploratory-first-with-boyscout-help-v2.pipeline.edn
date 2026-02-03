@@ -89,7 +89,7 @@ In your JSON response, output `exploratory-justification` with your explanation 
 Determine whether the exploratory implementation fulfills the stated requirements.
 
 Also, given the states requirements and the justification how they are met, verify the claims and check if the requirements are actually met,
-using the UI development skill, using the browser with playwright.
+using the UI development skill, using the browser with playwright. CLOSE THE BROWSER when you are done with collecting evidence.
 
 In your JSON response, output `verdict` with:
 - Whether the requirements are met (yes/no/partially)
