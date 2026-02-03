@@ -81,6 +81,7 @@ In your JSON response, output `exploratory-justification` with your explanation 
    :requires [:next-feature :exploratory-justification :exploratory-diff]
    :produces [:verdict]
    :json-output? true
+   :start-app? true
    :allowed-tools "Write,Edit,Bash"
    :prompt "You are the judge. Review:
 - The feature requirements in {{next-feature}}
@@ -102,12 +103,13 @@ In your JSON response, output `verdict` with:
    :requires [:verdict :exploratory-diff :exploratory-justification]
    :produces [:human-opinion]
    :human-input? true
-   :start-app? true
    :message "Please human, review the verdict in {{verdict}} and add your opinion in {{human-opinion}} (note that the app is up at {{port}})"}
 
   {:id :code-smell-detection
    :requires [:exploratory-diff]
    :produces [:boyscout-observations]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :prompt "Look at the exploratory diff in {{exploratory-diff}}.
 
   For each changed file, also look at surrounding context
@@ -140,7 +142,7 @@ In your JSON response, output `verdict` with:
 
   Be assertive, and if something is a pre-existing condition, then this is exactly the right thing for you to look at.
 
-  Write your findings to {{boyscout-observations}}."}
+  In your JSON response, output `boyscout-observations` with your findings."}
 
   {:id :planning
    :requires [:exploratory-implementers-complaints
@@ -150,6 +152,8 @@ In your JSON response, output `verdict` with:
               :human-opinion
               :boyscout-observations]
    :produces [:boyscout-plan :implementation-plan]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :prompt "Review the exploratory diff in {{exploratory-diff}}.
 
 ## High level - what we gonna do
@@ -181,7 +185,9 @@ pertaining to the feature** we are about to build goes into {{boyscout-plan}}.
 
 For the proper implementation, then
 - Pick mostly high and medium issues from the todos.
-- Be specific which files the implementer should touch on this next, better attempt"}
+- Be specific which files the implementer should touch on this next, better attempt
+
+In your JSON response, output `boyscout-plan` and `implementation-plan`."}
 
   {:id :revert
    :requires [:implementation-plan]
@@ -191,12 +197,14 @@ For the proper implementation, then
    :requires [:boyscout-plan :human-opinion]
    :produces [:boyscout-report]
    :run-tests? true
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :commit {:message "Preparatory refactoring"}
    :prompt "Now implement the boyscout plan!
 
 Make sure tests run (`make test`)
 
-Report what you did in {{boyscout-report}}"}
+In your JSON response, output `boyscout-report` with what you did."}
 
   {:id :implementation
    :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
@@ -221,30 +229,38 @@ In your JSON response, output `feature-justification` with what you did and why.
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:pr-architecture-review]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :skill "skills/architecture-review/SKILL.md"
    :prompt "Review the final implementation.
-Write findings to {{pr-architecture-review}}."}
+In your JSON response, output `pr-architecture-review` with your findings."}
 
   {:id :data-consistency-review
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:pr-data-consistency-review]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :skill "skills/data-consistency-review/SKILL.md"
    :prompt "Review the final implementation.
-Write findings to {{pr-data-consistency-review}}."}
+In your JSON response, output `pr-data-consistency-review` with your findings."}
 
   {:id :security-review
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:pr-security-review]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :skill "skills/security-review/SKILL.md"
    :prompt "Review the final implementation.
-Write findings to {{pr-security-review}}."}
+In your JSON response, output `pr-security-review` with your findings."}
 
   {:id :manual-testing
    :requires [:next-feature :feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:testing-result]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :start-app? true
    :prompt "Test the implemented feature in the browser.
 
@@ -252,7 +268,7 @@ Read the original feature description in {{next-feature}} and verify each requir
 
 Use the UI skill to interact with the application in the browser via playwright and take screenshots as evidence.
 
-Write your testing result to {{testing-result}}, including:
+In your JSON response, output `testing-result` with:
 - Each requirement from the feature description and whether it passes
 - Screenshots taken (prefix names with .playwright-mcp/)
 - Any bugs or unexpected behavior found
@@ -261,6 +277,8 @@ Write your testing result to {{testing-result}}, including:
   {:id :final-judge
    :requires [:next-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff :testing-result]
    :produces [:deployment-verdict]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :prompt "You are the final judge. Review:
 - The original feature request in {{next-feature}}
 - The human's earlier opinion in {{human-opinion}}
@@ -273,7 +291,7 @@ Write your testing result to {{testing-result}}, including:
 
 Determine whether this implementation is good to deploy.
 
-Write your verdict to {{deployment-verdict}}, including:
+In your JSON response, output `deployment-verdict` with:
 - Whether the feature requirements are fully met
 - Summary of any issues raised in the reviews
 - Your recommendation: deploy / deploy with caveats / do not deploy
@@ -291,11 +309,13 @@ Write your verdict to {{deployment-verdict}}, including:
    :requires [:next-feature :feature-justification]
    :requires-pseudo [:human-ok]
    :produces [:commit-message-body]
+   :json-output? true
+   :allowed-tools "Write,Edit,Bash"
    :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
                    :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff :testing-result]
    :prompt "Write a commit message body summarizing what was done and why.
 Output ONLY the commit message body (no subject line, no markdown fences).
-Write the result to {{commit-message-body}}"}
+In your JSON response, output `commit-message-body` with the result."}
 
   {:id :finalize
    :requires [:commit-message-body]
