@@ -9,6 +9,7 @@
 
 (def ^:dynamic *config* nil)
 (def total-cost (atom 0.0))
+(def total-duration-ms (atom 0))
 
 (defn validate-pipeline [config]
   (let [produced (atom (set (:seed-artifacts config)))]
@@ -161,10 +162,13 @@
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)
-          cost (or (:total_cost_usd parsed) 0)]
+          cost (or (:total_cost_usd parsed) 0)
+          duration (or (:duration_ms parsed) 0)]
       (when (pos? cost)
-        (swap! total-cost + cost)
-        (println (str "Stage cost: $" (format "%.4f" cost))))
+        (swap! total-cost + cost))
+      (when (pos? duration)
+        (swap! total-duration-ms + duration))
+      (println (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s"))
       (log-to-file (str "### Claude response:\n" (yaml/generate-string parsed)))
       (if content-json
         (doseq [doc-key produces]
@@ -303,9 +307,10 @@
 
 (defn run-pipeline [ctx]
   (reset! total-cost 0.0)
+  (reset! total-duration-ms 0)
   (doseq [stage (:stages *config*)]
     (run-stage stage ctx))
-  (println (str "\n=== Total Cost: $" (format "%.4f" @total-cost) " ===")))
+  (println (str "\n=== Total Cost: $" (format "%.4f" @total-cost) " | Total Duration: " (format "%.1f" (/ @total-duration-ms 1000.0 60.0)) " min ===")))
 
 (defn stage-id->node [id]
   (-> (name id)
