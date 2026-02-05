@@ -8,6 +8,7 @@
             [clj-yaml.core :as yaml]))
 
 (def ^:dynamic *config* nil)
+(def total-cost (atom 0.0))
 
 (defn validate-pipeline [config]
   (let [produced (atom (set (:seed-artifacts config)))]
@@ -159,7 +160,13 @@
     (log-to-file "### End of prompt\n")
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
-          content-json (:structured_output parsed)]
+          content-json (:structured_output parsed)
+          cost (get-in parsed [:result :cost_usd] 0)]
+      (log-to-file (str "### Response keys: " (keys parsed)))
+      (log-to-file (str "### Result keys: " (keys (:result parsed))))
+      (when (pos? cost)
+        (swap! total-cost + cost)
+        (log-to-file (str "### Stage cost: $" (format "%.4f" cost))))
       (log-to-file (str "### Claude response:\n" (yaml/generate-string content-json)))
       (if content-json
         (doseq [doc-key produces]
@@ -297,8 +304,10 @@
       (git-clear-next-feature))))
 
 (defn run-pipeline [ctx]
+  (reset! total-cost 0.0)
   (doseq [stage (:stages *config*)]
-    (run-stage stage ctx)))
+    (run-stage stage ctx))
+  (println (str "\n=== Total Cost: $" (format "%.4f" @total-cost) " ===")))
 
 (defn stage-id->node [id]
   (-> (name id)
