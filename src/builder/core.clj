@@ -165,7 +165,7 @@
       (when (pos? cost)
         (swap! total-cost + cost)
         (println (str "Stage cost: $" (format "%.4f" cost))))
-      (log-to-file (str "### Claude response:\n" (yaml/generate-string content-json)))
+      (log-to-file (str "### Claude response:\n" (yaml/generate-string parsed)))
       (if content-json
         (doseq [doc-key produces]
           (let [k (keyword (name doc-key))
