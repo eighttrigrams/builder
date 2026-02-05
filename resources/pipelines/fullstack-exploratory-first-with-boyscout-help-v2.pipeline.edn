@@ -228,7 +228,6 @@ In your JSON response, output `feature-justification` with what you did and why.
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:pr-architecture-review]
-   :allowed-tools "Write,Edit,Bash"
    :skill "skills/architecture-review/SKILL.md"
    :prompt "Review the final implementation.
 In your JSON response, output `pr-architecture-review` with your findings."}
@@ -237,7 +236,6 @@ In your JSON response, output `pr-architecture-review` with your findings."}
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:pr-data-consistency-review]
-   :allowed-tools "Write,Edit,Bash"
    :skill "skills/data-consistency-review/SKILL.md"
    :prompt "Review the final implementation.
 In your JSON response, output `pr-data-consistency-review` with your findings."}
@@ -246,7 +244,6 @@ In your JSON response, output `pr-data-consistency-review` with your findings."}
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:pr-security-review]
-   :allowed-tools "Write,Edit,Bash"
    :skill "skills/security-review/SKILL.md"
    :prompt "Review the final implementation.
 In your JSON response, output `pr-security-review` with your findings."}
