@@ -4,7 +4,8 @@
             [clojure.java.io :as io]
             [babashka.process :refer [shell process]]
             [babashka.fs :as fs]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            [clj-yaml.core :as yaml]))
 
 (def ^:dynamic *config* nil)
 
@@ -159,7 +160,7 @@
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)]
-      (log-to-file (str "### Claude JSON response: " (:out result)))
+      (log-to-file (str "### Claude response:\n" (yaml/generate-string content-json)))
       (if content-json
         (doseq [doc-key produces]
           (let [k (keyword (name doc-key))
