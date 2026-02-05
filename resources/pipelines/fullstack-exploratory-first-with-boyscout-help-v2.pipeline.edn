@@ -25,7 +25,8 @@
   :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}
   :repair-tasks                    {:file "REPAIR_TASKS.md"}
   :repair-report                   {:file "REPAIR_REPORT.md"}
-  :repair-verdict                  {:file "REPAIR_VERDICT.md"}}
+  :repair-verdict                  {:file "REPAIR_VERDICT.md"}
+  :lint-report                     {:file "LINT_REPORT.txt"}}
 
  :stages
  [{:id :enrich-feature
@@ -147,13 +148,22 @@ In your JSON response, output `verdict` with:
 
   In your JSON response, output `boyscout-observations` with your findings."}
 
+  {:id :revert
+   :git-restore? true}
+
+  {:id :lint
+   :produces [:lint-report]
+   :shell "clj-kondo --lint src | grep -v \"Unresolved var:\""
+   :shell-output :lint-report}
+
   {:id :planning
    :requires [:exploratory-implementers-complaints
               :next-feature
               :exploratory-diff
               :verdict
               :human-opinion
-              :boyscout-observations]
+              :boyscout-observations
+              :lint-report]
    :produces [:boyscout-plan :implementation-plan]
    :json-output? true
    :allowed-tools "Write,Edit,Bash"
@@ -176,7 +186,9 @@ or to to the implementation plan but not to both.
 
 ### Boyscout plan
 
-Take especially seriously what you learned from {{exploratory-implementers-complaints}} and {{boyscout-observations}}.
+Before anything else, the boyscout should address any issues found by clj-kondo in {{lint-report}}. These are the first priority.
+
+Then, take especially seriously what you learned from {{exploratory-implementers-complaints}} and {{boyscout-observations}}.
 
 Note that soon we will discard the exploratory changes.
 So the cleanup will be performed against the sources as they appeared in main branch.
@@ -190,11 +202,7 @@ For the proper implementation, then
 - Pick mostly high and medium issues from the todos.
 - Be specific which files the implementer should touch on this next, better attempt
 
-In your JSON response, output `boyscout-plan` and `implementation-plan`."}
-
-  {:id :revert
-   :requires [:implementation-plan]
-   :git-restore? true}
+In your JSON response, output `boyscout-plan` and `implementation-plan`."} 
 
   {:id :boyscout-refactoring
    :requires [:boyscout-plan :human-opinion]
@@ -381,7 +389,7 @@ In your JSON response, output `deployment-verdict` with:
    :allowed-tools "Write,Edit,Bash"
    :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
                    :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff :testing-result
-                   :repair-tasks :repair-report :repair-verdict]
+                   :repair-tasks :repair-report :repair-verdict :lint-report]
    :prompt "Write a commit message body summarizing what was done and why.
 Output ONLY the commit message body (no subject line, no markdown fences).
 In your JSON response, output `commit-message-body` with the result."}
