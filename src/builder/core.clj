@@ -282,7 +282,7 @@
 
     (when prompt
       (let [model (or (:model stage) (:model ctx))]
-        (if (:json-output? stage)
+        (if (seq (:produces stage))
           (run-claude-json (build-prompt stage ctx) model (:produces stage) (:allowed-tools stage))
           (run-claude (build-prompt stage ctx) model))))
 
