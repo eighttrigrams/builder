@@ -241,7 +241,7 @@
 (defn run-shell-stage [{:keys [shell shell-output]} ctx]
   (when (and shell shell-output)
     (let [cmd (interpolate shell ctx)
-          result (babashka.process/shell {:out :string} cmd)]
+          result (babashka.process/shell {:out :string :continue true} "bash" "-c" cmd)]
       (spit (doc-path shell-output) (:out result)))))
 
 (defn run-stage [stage ctx]
