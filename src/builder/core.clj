@@ -161,12 +161,10 @@
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)
-          cost (get-in parsed [:result :cost_usd] 0)]
-      (log-to-file (str "### Response keys: " (keys parsed)))
-      (log-to-file (str "### Result keys: " (keys (:result parsed))))
+          cost (or (:total_cost_usd parsed) 0)]
       (when (pos? cost)
         (swap! total-cost + cost)
-        (log-to-file (str "### Stage cost: $" (format "%.4f" cost))))
+        (println (str "Stage cost: $" (format "%.4f" cost))))
       (log-to-file (str "### Claude response:\n" (yaml/generate-string content-json)))
       (if content-json
         (doseq [doc-key produces]
