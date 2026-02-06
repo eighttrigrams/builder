@@ -377,20 +377,14 @@
         (println "Error: Makefile missing required target:" target)
         (System/exit 1)))))
 
-(def valid-models #{"haiku" "sonnet" "opus"})
-
 (defn load-project-config []
   (let [config-file "project-builder.edn"]
     (when-not (fs/exists? config-file)
       (println "Error: project-builder.edn not found in current directory")
       (System/exit 1))
-    (let [config (edn/read-string (slurp config-file))
-          model (:model config)]
-      (when-not model
-        (println "Error: project-builder.edn must contain :model (haiku, sonnet, or opus)")
-        (System/exit 1))
-      (when-not (valid-models model)
-        (println "Error: :model must be one of: haiku, sonnet, opus")
+    (let [config (edn/read-string (slurp config-file))]
+      (when-not (:model config)
+        (println "Error: project-builder.edn must contain :model")
         (System/exit 1))
       config)))
 
