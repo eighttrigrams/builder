@@ -1,6 +1,4 @@
 {:standard-fullstack? true
- :docs-dir "build-next-feature"
- :log-file "hooks.log"
 
  :seed-artifacts [:next-feature]
 

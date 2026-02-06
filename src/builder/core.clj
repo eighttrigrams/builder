@@ -92,6 +92,7 @@
         (fs/delete path)))))
 
 (defn log-file [] (:log-file *config*))
+(defn prompts-log [] (:prompts-log *config*))
 
 (defn timestamp []
   (let [fmt (java.text.SimpleDateFormat. "yyyy-MM-dd HH:mm:ss")]
@@ -99,6 +100,10 @@
 
 (defn log-to-file [msg]
   (when-let [f (log-file)]
+    (spit f (str (timestamp) " - " msg "\n") :append true)))
+
+(defn log-prompt [msg]
+  (when-let [f (prompts-log)]
     (spit f (str (timestamp) " - " msg "\n") :append true)))
 
 (defn builder-root []
@@ -142,13 +147,12 @@
         args (if allowed-tools
                (into base-args ["--allowedTools" allowed-tools])
                base-args)]
-    #_(log-to-file (str "### [" stage-name "] Plugin dir: " plugin-dir))
-    (log-to-file (str "[" stage-name "] Model: " model))
-    (log-to-file (str "[" stage-name "] Allowed tools: " (or allowed-tools "none")))
-    (log-to-file (str "[" stage-name "] JSON schema: " json-schema))
-    (log-to-file (str "[" stage-name "] Prompt:"))
-    (log-to-file prompt)
-    (log-to-file (str "[" stage-name "] End of prompt\n"))
+    (log-prompt (str "[" stage-name "] Model: " model))
+    (log-prompt (str "[" stage-name "] Allowed tools: " (or allowed-tools "none")))
+    (log-prompt (str "[" stage-name "] JSON schema: " json-schema))
+    (log-prompt (str "[" stage-name "] Prompt:"))
+    (log-prompt prompt)
+    (log-prompt (str "[" stage-name "] End of prompt\n"))
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)
@@ -161,7 +165,7 @@
       (let [cost-line (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s")]
         (println cost-line)
         (log-to-file (str "[" stage-name "] " cost-line)))
-      (log-to-file (str "[" stage-name "] Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
+      (log-prompt (str "[" stage-name "] Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
       (if content-json
         (doseq [doc-key produces]
           (let [k (keyword (name doc-key))
@@ -384,14 +388,15 @@
 
 (defn -main [& args]
   (let [[feature-name] args
-        {:keys [pipeline-name port project-name model]} (load-project-config)]
+        {:keys [pipeline-name port project-name model docs-dir] :as project-config} (load-project-config)]
     (when-not feature-name
       (println "Usage: builder <feature-name>")
       (System/exit 1))
-    (when-not (and pipeline-name project-name)
-      (println "Error: project-builder.edn must contain :pipeline-name and :project-name")
+    (when-not (and pipeline-name project-name docs-dir (:log-file project-config) (:prompts-log project-config))
+      (println "Error: project-builder.edn must contain :pipeline-name, :project-name, :docs-dir, :log-file, and :prompts-log")
       (System/exit 1))
     (load-config! pipeline-name)
+    (alter-var-root #'*config* merge (select-keys project-config [:docs-dir :log-file :prompts-log]))
     (when (:standard-fullstack? *config*)
       (when-not port
         (println "Error: This pipeline requires :port in project-builder.edn")
