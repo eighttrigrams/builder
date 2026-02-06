@@ -142,7 +142,7 @@
         args (if allowed-tools
                (into base-args ["--allowedTools" allowed-tools])
                base-args)]
-    (log-to-file (str "### [" stage-name "] Plugin dir: " plugin-dir))
+    #_(log-to-file (str "### [" stage-name "] Plugin dir: " plugin-dir))
     (log-to-file (str "### [" stage-name "] Model: " model))
     (log-to-file (str "### [" stage-name "] Allowed tools: " (or allowed-tools "none")))
     (log-to-file (str "### [" stage-name "] JSON schema: " json-schema))
