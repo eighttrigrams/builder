@@ -22,7 +22,6 @@
   :human-opinion                   {:file "HUMAN_OPINION.md"}
   :boyscout-report                 {:file "BOYSCOUT_REPORT.md"}
   :feature-justification           {:file "FEATURE_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
-  :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}
   :repair-tasks                    {:file "REPAIR_TASKS.md"}
   :repair-report                   {:file "REPAIR_REPORT.md"}
   :repair-verdict                  {:file "REPAIR_VERDICT.md"}
@@ -363,20 +362,9 @@ In your JSON response, output `deployment-verdict` with:
    :produces-pseudo [:human-ok]
    :message "Human, please visit the app in a browser, and also check the changes. Everything ok?"}
 
-  {:id :synthesize-commit
-   :requires [:next-feature :feature-justification]
+  {:id :finalize
    :requires-pseudo [:human-ok]
-   :produces [:commit-message-body]
-   :allowed-tools "Write,Edit,Bash"
+   :clear-next-feature? true
    :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
                    :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff :testing-result
-                   :repair-tasks :repair-report :repair-verdict :lint-report]
-   :prompt "Write a commit message body summarizing what was done and why.
-Output ONLY the commit message body (no subject line, no markdown fences).
-In your JSON response, output `commit-message-body` with the result."}
-
-  {:id :finalize
-   :requires [:commit-message-body]
-   :amend-commit? true
-   :cleanup-after [:commit-message-body :feature-justification]
-   :clear-next-feature? true}]}
+                   :repair-tasks :repair-report :repair-verdict :lint-report :feature-justification]}]}

@@ -18,7 +18,7 @@
   :human-opinion                   {:file "HUMAN_OPINION.md"}
   :boyscout-report                 {:file "BOYSCOUT_REPORT.md"}
   :feature-justification           {:file "FEATURE_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
-  :commit-message-body             {:file "COMMIT_MESSAGE_BODY.txt"}}
+}
 
  :stages
  [{:id :enrich-feature
@@ -221,18 +221,8 @@ In your JSON response, output `feature-justification` with what you did and why.
    :produces-pseudo [:human-ok]
    :message "Human, please visit the app in a browser, and also check the changes. Everything ok?"}
 
-  {:id :synthesize-commit
-   :requires [:next-feature :feature-justification]
-   :requires-pseudo [:human-ok]
-   :produces [:commit-message-body]
-   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
-                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan]
-   :prompt "Write a commit message body summarizing what was done and why.
-Output ONLY the commit message body (no subject line, no markdown fences).
-Write the result to {{commit-message-body}}"}
-
   {:id :finalize
-   :requires [:commit-message-body]
-   :amend-commit? true
-   :cleanup-after [:commit-message-body :feature-justification]
-   :clear-next-feature? true}]}
+   :requires-pseudo [:human-ok]
+   :clear-next-feature? true
+   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
+                   :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :feature-justification]}]}

@@ -227,17 +227,10 @@
     (shell "git" "commit" "-m" (str commit-message-prefix " - " message))
     (println "No changes to commit, skipping.")))
 
-(defn git-amend-commit [commit-message-prefix]
-  (let [body (when (fs/exists? (doc-path :commit-message-body))
-               (slurp (doc-path :commit-message-body)))]
-    (shell "git" "commit" "--amend" "-m"
-           (str commit-message-prefix " - Implementation")
-           "-m" (or body ""))))
-
 (defn git-clear-next-feature []
   (spit (doc-path :next-feature) "")
   (shell "git" "add" ".")
-  (shell "git" "commit" "--amend" "--no-edit"))
+  (shell "git" "commit" "-m" "Clear next feature"))
 
 (defn run-shell-stage [{:keys [shell shell-output]} ctx]
   (when (and shell shell-output)
@@ -247,7 +240,7 @@
 
 (defn run-stage [stage ctx]
   (let [{:keys [id prompt human-input? start-app? stop-app? run-tests?
-                commit cleanup cleanup-after git-revert? git-restore? amend-commit?
+                commit cleanup cleanup-after git-revert? git-restore?
                 clear-next-feature? message]} stage
         {:keys [commit-message-prefix project-name]} ctx]
     (println "\n=== Stage:" (name id) "===")
@@ -286,9 +279,6 @@
     (when commit
       (git-commit (:message commit) commit-message-prefix))
 
-    (when amend-commit?
-      (git-amend-commit commit-message-prefix))
-
     (when cleanup-after
       (cleanup-docs cleanup-after))
 
@@ -321,25 +311,17 @@
   (let [stages (:stages *config*)
         sb (StringBuilder.)
         commit-artifacts (atom #{})
-        pseudo-artifacts (atom #{})
-        last-commit (atom nil)
-        past-revert? (atom false)
-        post-revert-commits (atom [])
-        finalize-stage (atom nil)]
+        pseudo-artifacts (atom #{})]
     (.append sb "flowchart TB\n")
-    (doseq [{:keys [id requires produces commit git-revert? requires-commit? amend-commit?
+    (doseq [{:keys [id requires produces commit git-revert?
                     produces-pseudo requires-pseudo requires-commits]} stages]
       (let [stage-node (stage-id->node id)]
-        (when amend-commit?
-          (reset! finalize-stage stage-node))
         (when (seq requires)
           (doseq [req requires]
             (.append sb (format "    %s --> %s\n" (doc-id->node req) stage-node))))
         (when (seq requires-pseudo)
           (doseq [req requires-pseudo]
             (.append sb (format "    %s --> %s\n" (doc-id->node req) stage-node))))
-        (when (and requires-commit? @last-commit)
-          (.append sb (format "    %s --> %s\n" (doc-id->node @last-commit) stage-node)))
         (when (seq requires-commits)
           (doseq [c requires-commits]
             (.append sb (format "    %s --> %s\n" (doc-id->node (commit-artifact-id c)) stage-node))))
@@ -353,15 +335,7 @@
         (when (or commit git-revert?)
           (let [commit-id (commit-artifact-id id)]
             (swap! commit-artifacts conj commit-id)
-            (reset! last-commit commit-id)
-            (when (and @past-revert? commit)
-              (swap! post-revert-commits conj commit-id))
-            (.append sb (format "    %s --> %s\n" stage-node (doc-id->node commit-id)))))
-        (when git-revert?
-          (reset! past-revert? true))))
-    (when @finalize-stage
-      (doseq [c @post-revert-commits]
-        (.append sb (format "    %s --> %s\n" (doc-id->node c) @finalize-stage))))
+            (.append sb (format "    %s --> %s\n" stage-node (doc-id->node commit-id)))))))
     (.append sb "\n")
     (let [all-stages (map :id stages)
           all-docs (->> stages
