@@ -153,6 +153,7 @@
     (log-prompt (str "[" stage-name "] Prompt:"))
     (log-prompt prompt)
     (log-prompt (str "[" stage-name "] End of prompt\n"))
+    (log-to-file (str "[" stage-name "] Sending prompt to an agent now"))
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)
