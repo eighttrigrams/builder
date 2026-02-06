@@ -143,12 +143,12 @@
                (into base-args ["--allowedTools" allowed-tools])
                base-args)]
     #_(log-to-file (str "### [" stage-name "] Plugin dir: " plugin-dir))
-    (log-to-file (str "### [" stage-name "] Model: " model))
-    (log-to-file (str "### [" stage-name "] Allowed tools: " (or allowed-tools "none")))
-    (log-to-file (str "### [" stage-name "] JSON schema: " json-schema))
-    (log-to-file (str "### [" stage-name "] Prompt:"))
+    (log-to-file (str "[" stage-name "] Model: " model))
+    (log-to-file (str "[" stage-name "] Allowed tools: " (or allowed-tools "none")))
+    (log-to-file (str "[" stage-name "] JSON schema: " json-schema))
+    (log-to-file (str "[" stage-name "] Prompt:"))
     (log-to-file prompt)
-    (log-to-file (str "### [" stage-name "] End of prompt\n"))
+    (log-to-file (str "[" stage-name "] End of prompt\n"))
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)
@@ -160,8 +160,8 @@
         (swap! total-duration-ms + duration))
       (let [cost-line (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s")]
         (println cost-line)
-        (log-to-file (str "### [" stage-name "] " cost-line)))
-      (log-to-file (str "### [" stage-name "] Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
+        (log-to-file (str "[" stage-name "] " cost-line)))
+      (log-to-file (str "[" stage-name "] Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
       (if content-json
         (doseq [doc-key produces]
           (let [k (keyword (name doc-key))
@@ -170,12 +170,12 @@
             (if content
               (do
                 (println "Writing" path)
-                (log-to-file (str "### JSON output: writing key '" (name k) "' to " path))
+                (log-to-file (str "JSON output: writing key '" (name k) "' to " path))
                 (spit path content))
-              (log-to-file (str "### JSON output: key '" (name k) "' not found in response")))))
+              (log-to-file (str "JSON output: key '" (name k) "' not found in response")))))
         (do
           (println "Error: No structured_output in Claude response")
-          (log-to-file "### JSON output: ERROR - No structured_output in Claude response"))))))
+          (log-to-file "JSON output: ERROR - No structured_output in Claude response"))))))
 
 (defn start-app []
   (println "Starting app...")
