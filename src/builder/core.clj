@@ -125,20 +125,10 @@
                           (str (load-skill skill) "\n\n"))]
       (interpolate (str skill-content file-refs prompt) ctx))))
 
-(defn run-claude [prompt model]
-  (println "Running Claude with model:" model)
-  (let [plugin-dir (builder-root)]
-    (println "Plugin dir:" plugin-dir)
-    (log-to-file (str "### Plugin dir: " plugin-dir))
-    (log-to-file (str "### Model: " model))
-    (log-to-file "### Sending the following prompt to Claude:")
-    (log-to-file prompt)
-    (log-to-file "### End of prompt\n")
-    (shell "claude" "-p" prompt "--allowedTools" "Write" "--plugin-dir" plugin-dir "--model" model)))
-
-(defn run-claude-json [prompt model produces allowed-tools]
+(defn run-claude-json [stage-id prompt model produces allowed-tools]
   (println "Running Claude (JSON mode) with model:" model)
   (let [plugin-dir (builder-root)
+        stage-name (name stage-id)
         output-keys (map name produces)
         json-schema (json/generate-string
                      {:type "object"
@@ -152,13 +142,13 @@
         args (if allowed-tools
                (into base-args ["--allowedTools" allowed-tools])
                base-args)]
-    (log-to-file (str "### Plugin dir: " plugin-dir))
-    (log-to-file (str "### Model: " model))
-    (log-to-file (str "### Allowed tools: " (or allowed-tools "none")))
-    (log-to-file (str "### JSON schema: " json-schema))
-    (log-to-file "### Sending the following prompt to Claude (JSON mode):")
+    (log-to-file (str "### [" stage-name "] Plugin dir: " plugin-dir))
+    (log-to-file (str "### [" stage-name "] Model: " model))
+    (log-to-file (str "### [" stage-name "] Allowed tools: " (or allowed-tools "none")))
+    (log-to-file (str "### [" stage-name "] JSON schema: " json-schema))
+    (log-to-file (str "### [" stage-name "] Prompt:"))
     (log-to-file prompt)
-    (log-to-file "### End of prompt\n")
+    (log-to-file (str "### [" stage-name "] End of prompt\n"))
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)
@@ -168,8 +158,10 @@
         (swap! total-cost + cost))
       (when (pos? duration)
         (swap! total-duration-ms + duration))
-      (println (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s"))
-      (log-to-file (str "### Claude response:\n" (yaml/generate-string parsed)))
+      (let [cost-line (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s")]
+        (println cost-line)
+        (log-to-file (str "### [" stage-name "] " cost-line)))
+      (log-to-file (str "### [" stage-name "] Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
       (if content-json
         (doseq [doc-key produces]
           (let [k (keyword (name doc-key))
@@ -284,9 +276,7 @@
 
     (when prompt
       (let [model (or (:model stage) (:model ctx))]
-        (if (seq (:produces stage))
-          (run-claude-json (build-prompt stage ctx) model (:produces stage) (:allowed-tools stage))
-          (run-claude (build-prompt stage ctx) model))))
+        (run-claude-json id (build-prompt stage ctx) model (:produces stage) (:allowed-tools stage))))
 
     (check-produces stage)
 
