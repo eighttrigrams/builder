@@ -163,9 +163,14 @@
         (swap! total-cost + cost))
       (when (pos? duration)
         (swap! total-duration-ms + duration))
-      (let [cost-line (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s")]
+      (let [models (some->> (:modelUsage parsed) keys (map name) (str/join ", "))
+            cost-line (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s")]
         (println cost-line)
-        (log-to-file (str "[" stage-name "] " cost-line)))
+        (log-to-file (str "[" stage-name "] " cost-line))
+        (when models
+          (log-to-file (str "[" stage-name "] Models: " models)))
+        (when content-json
+          (log-to-file (str "[" stage-name "] Output keys: " (str/join ", " (map name (keys content-json)))))))
       (log-prompt (str "[" stage-name "] Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
       (if content-json
         (doseq [doc-key produces]
