@@ -98,13 +98,13 @@
   (let [fmt (java.text.SimpleDateFormat. "yyyy-MM-dd HH:mm:ss")]
     (.format fmt (java.util.Date.))))
 
-(defn log-to-file [msg]
+(defn log-to-file [stage-name msg]
   (when-let [f (log-file)]
-    (spit f (str (timestamp) " - " msg "\n") :append true)))
+    (spit f (str (timestamp) " - Builder [" stage-name "] " msg "\n") :append true)))
 
-(defn log-prompt [msg]
+(defn log-prompt [stage-name msg]
   (when-let [f (prompts-log)]
-    (spit f (str (timestamp) " - " msg "\n") :append true)))
+    (spit f (str (timestamp) " - Builder [" stage-name "] " msg "\n") :append true)))
 
 (defn builder-root []
   (-> (io/resource "pipelines")
@@ -147,13 +147,13 @@
         args (if allowed-tools
                (into base-args ["--allowedTools" allowed-tools])
                base-args)]
-    (log-prompt (str "[" stage-name "] Model: " model))
-    (log-prompt (str "[" stage-name "] Allowed tools: " (or allowed-tools "none")))
-    (log-prompt (str "[" stage-name "] JSON schema: " json-schema))
-    (log-prompt (str "[" stage-name "] Prompt:"))
-    (log-prompt prompt)
-    (log-prompt (str "[" stage-name "] End of prompt\n"))
-    (log-to-file (str "[" stage-name "] Sending prompt to an agent now"))
+    (log-prompt stage-name (str "Model: " model))
+    (log-prompt stage-name (str "Allowed tools: " (or allowed-tools "none")))
+    (log-prompt stage-name (str "JSON schema: " json-schema))
+    (log-prompt stage-name "Prompt:")
+    (log-prompt stage-name prompt)
+    (log-prompt stage-name "End of prompt\n")
+    (log-to-file stage-name "Sending prompt to an agent now")
     (let [result (apply babashka.process/shell {:out :string} args)
           parsed (json/parse-string (:out result) true)
           content-json (:structured_output parsed)
@@ -166,12 +166,12 @@
       (let [models (some->> (:modelUsage parsed) keys (map name) (str/join ", "))
             cost-line (str "Stage cost: $" (format "%.4f" cost) " | Duration: " (format "%.1f" (/ duration 1000.0)) "s")]
         (println cost-line)
-        (log-to-file (str "[" stage-name "] " cost-line))
+        (log-to-file stage-name cost-line)
         (when models
-          (log-to-file (str "[" stage-name "] Models: " models)))
+          (log-to-file stage-name (str "Models: " models)))
         (when content-json
-          (log-to-file (str "[" stage-name "] Output keys: " (str/join ", " (map name (keys content-json)))))))
-      (log-prompt (str "[" stage-name "] Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
+          (log-to-file stage-name (str "Output keys: " (str/join ", " (map name (keys content-json)))))))
+      (log-prompt stage-name (str "Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
       (if content-json
         (doseq [doc-key produces]
           (let [k (keyword (name doc-key))
@@ -180,12 +180,12 @@
             (if content
               (do
                 (println "Writing" path)
-                (log-to-file (str "JSON output: writing key '" (name k) "' to " path))
+                (log-to-file stage-name (str "JSON output: writing key '" (name k) "' to " path))
                 (spit path content))
-              (log-to-file (str "JSON output: key '" (name k) "' not found in response")))))
+              (log-to-file stage-name (str "JSON output: key '" (name k) "' not found in response")))))
         (do
           (println "Error: No structured_output in Claude response")
-          (log-to-file "JSON output: ERROR - No structured_output in Claude response"))))))
+          (log-to-file stage-name "JSON output: ERROR - No structured_output in Claude response"))))))
 
 (defn start-app []
   (println "Starting app...")
