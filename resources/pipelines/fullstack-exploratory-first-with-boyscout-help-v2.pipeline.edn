@@ -261,7 +261,12 @@ In your JSON response, output `testing-result` with:
 - Each requirement from the feature description and whether it passes
 - Screenshots taken (prefix names with .playwright-mcp/)
 - Any bugs or unexpected behavior found
-- Overall assessment: all tests pass / some failures / major issues"}
+- Overall assessment: all tests pass / some failures / major issues
+            
+            Don't waffle around of what worked, I'm only interested in what did NOT work.
+            But in case you don't find absolutely anything, say so explicitly, to leave noone wonder.
+            
+            "}
 
   {:id :triage-reviews
    :requires [:pr-architecture-review :pr-data-consistency-review :pr-security-review :testing-result]
