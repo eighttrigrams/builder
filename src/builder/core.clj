@@ -302,8 +302,10 @@
     (run-stage stage ctx))
   (let [total-secs (/ @total-duration-ms 1000.0)
         mins (int (/ total-secs 60))
-        secs (int (mod total-secs 60))]
-    (println (str "\n=== Total Cost: $" (format "%.4f" @total-cost) " | Total Duration: " mins "m " secs "s ==="))))
+        secs (int (mod total-secs 60))
+        summary (str "Total Cost: $" (format "%.4f" @total-cost) " | Total Duration: " mins "m " secs "s")]
+    (println (str "\n=== " summary " ==="))
+    (log-to-file "pipeline" summary)))
 
 (defn stage-id->node [id]
   (-> (name id)
