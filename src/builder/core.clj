@@ -168,7 +168,7 @@
         (println cost-line)
         (log-to-file stage-name cost-line)
         (when models
-          (log-to-file stage-name (str "Models: " models)))
+          (log-to-file stage-name (str "Models used: " models)))
         (when content-json
           (log-to-file stage-name (str "Output keys: " (str/join ", " (map name (keys content-json)))))))
       (log-prompt stage-name (str "Response:\n" (yaml/generate-string parsed :dumper-options {:flow-style :block})))
