@@ -225,7 +225,7 @@ In your JSON response, output `feature-justification` with what you did and why.
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:pr-architecture-review]
-   :skill "skills/architecture-review/SKILL.md"
+   :skill "skills/local/architecture-review/SKILL.md"
    :prompt "Review the final implementation.
 In your JSON response, output `pr-architecture-review` with your findings."}
 
