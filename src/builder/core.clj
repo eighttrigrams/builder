@@ -132,8 +132,7 @@
 
 (defn run-claude-json [stage-id prompt model produces allowed-tools]
   (println "Running Claude (JSON mode) with model:" model)
-  (let [plugin-dir (builder-root)
-        stage-name (name stage-id)
+  (let [stage-name (name stage-id)
         output-keys (map name produces)
         json-schema (json/generate-string
                      {:type "object"
@@ -142,7 +141,6 @@
         base-args ["claude" "-p" prompt
                    "--output-format" "json"
                    "--json-schema" json-schema
-                   "--plugin-dir" plugin-dir
                    "--model" model]
         args (if allowed-tools
                (into base-args ["--allowedTools" allowed-tools])
