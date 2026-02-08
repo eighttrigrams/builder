@@ -204,7 +204,7 @@
   (let [send-msg "scripts/send-message.sh"
         title (str "Stage: " (name stage-id))]
     (when (fs/exists? send-msg)
-      (shell {:continue true} send-msg title message project-name))))
+      (shell {:continue true} send-msg title message (str project-name " Builder")))))
 
 (defn wait-for-human [message {:keys [id produces]} project-name]
   (shell "say" (str project-name " needs your attention now."))
