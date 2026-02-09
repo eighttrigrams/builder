@@ -47,7 +47,7 @@ Output the resulting document as `next-feature` in your JSON response."}
   {:id :exploratory-implementation
    :requires [:next-feature]
    :produces [:exploratory-implementers-complaints :exploratory-justification]
-   :run-tests? true
+   :after [:run-tests]
    :json-output? true
    :allowed-tools "Write,Edit,Bash"
    :prompt "We are building a new feature {{feature-name}}.
@@ -178,7 +178,7 @@ For the proper implementation, then
    :requires [:boyscout-plan :implementation-plan]
    :produces [:human-opinion]
    :human-input? true
-   :start-app? true
+   :before [:start-app]
    :message "Please human, add your verdict in {{human-opinion}} (note that the app is up at {{port}})"}
 
   {:id :revert
@@ -188,7 +188,7 @@ For the proper implementation, then
   {:id :boyscout-refactoring
    :requires [:boyscout-plan :human-opinion]
    :produces [:boyscout-report]
-   :run-tests? true
+   :after [:run-tests]
    :commit {:message "Preparatory refactoring"}
    :prompt "Now implement the boyscout plan!
 
@@ -199,7 +199,7 @@ Report what you did in {{boyscout-report}}"}
   {:id :implementation
    :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
    :produces [:feature-justification]
-   :run-tests? true
+   :after [:run-tests]
    :json-output? true
    :allowed-tools "Write,Edit,Bash"
    :commit {:message "Implementation"}
@@ -214,8 +214,8 @@ In your JSON response, output `feature-justification` with what you did and why.
    :requires [:feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :human-input? true
-   :start-app? true
-   :stop-app? true
+   :before [:start-app]
+   :after [:stop-app]
    :produces-pseudo [:human-ok]
    :message "Human, please visit the app in a browser, and also check the changes. Everything ok?"}
 

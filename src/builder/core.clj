@@ -247,7 +247,7 @@
       (spit (doc-path shell-output) (:out result)))))
 
 (defn run-stage [stage ctx]
-  (let [{:keys [id prompt human-input? start-app? stop-app? run-tests?
+  (let [{:keys [id prompt human-input? before after
                 commit cleanup cleanup-after git-revert? git-restore?
                 clear-next-feature? message]} stage
         {:keys [commit-message-prefix project-name]} ctx]
@@ -258,34 +258,41 @@
     (when cleanup
       (cleanup-docs cleanup))
 
+    (doseq [action before]
+      (case action
+        :start-app (start-app)
+        :stop-app (stop-app)
+        :run-tests (run-tests)))
+
+    ;; main action
+
     (when git-revert?
       (shell "git" "revert" "--no-edit" "HEAD"))
-
+    
     (when git-restore?
       (shell "git" "restore" "."))
-
+    
     (run-shell-stage stage ctx)
-
-    (when start-app?
-      (start-app))
 
     (when human-input?
       (wait-for-human (interpolate (or message "Waiting for human input...") ctx) stage project-name))
-
-    (when stop-app?
-      (stop-app))
 
     (when prompt
       (let [model (or (:model stage) (:model ctx))]
         (run-claude-json id (build-prompt stage ctx) model (:produces stage) (:allowed-tools stage))))
 
-    (check-produces stage)
-
-    (when run-tests?
-      (run-tests))
-
     (when commit
       (git-commit (:message commit) commit-message-prefix))
+    
+    ;; - main action
+    
+    (doseq [action after]
+      (case action
+        :start-app (start-app)
+        :stop-app (stop-app)
+        :run-tests (run-tests)))
+
+    (check-produces stage) 
 
     (when cleanup-after
       (cleanup-docs cleanup-after))

@@ -53,7 +53,7 @@ Output the resulting document as `next-feature` in your JSON response."}
   {:id :exploratory-implementation
    :requires [:next-feature]
    :produces [:exploratory-implementers-complaints :exploratory-justification]
-   :run-tests? true
+   :after [:run-tests]
    :allowed-tools "Write,Edit,Bash"
    :prompt "We are building a new feature {{feature-name}}.
 
@@ -79,7 +79,8 @@ In your JSON response, output `exploratory-justification` with your explanation 
   {:id :judge
    :requires [:next-feature :exploratory-justification :exploratory-diff]
    :produces [:verdict]
-   :start-app? true
+   :before [:start-app]
+   :after [:stop-app]
    :allowed-tools "Write,Edit,Bash"
    :prompt "You are the judge. Review:
 - The feature requirements in {{next-feature}}
@@ -93,13 +94,14 @@ using the UI development skill, using the browser with playwright. CLOSE THE BRO
 
 In your JSON response, output `verdict` with:
 - Whether the requirements are met (yes/no/partially)
-- What was done well
-- What is missing or could be improved
+- What is missing or must be improved
 - Any concerns about the approach"}
 
   {:id :human-review
    :requires [:verdict :exploratory-diff :exploratory-justification]
    :produces [:human-opinion]
+   :before [:start-app]
+   :after [:stop-app]
    :human-input? true
    :message "Please human, review the verdict in {{verdict}} and add your opinion in {{human-opinion}} (note that the app is up at {{port}})"}
 
@@ -199,7 +201,7 @@ In your JSON response, output `boyscout-plan` and `implementation-plan`."}
   {:id :boyscout-refactoring
    :requires [:boyscout-plan :human-opinion]
    :produces [:boyscout-report]
-   :run-tests? true
+   :after [:run-tests]
    :allowed-tools "Write,Edit,Bash"
    :commit {:message "Preparatory refactoring"}
    :prompt "Now implement the boyscout plan!
@@ -211,7 +213,7 @@ In your JSON response, output `boyscout-report` with what you did."}
   {:id :implementation
    :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
    :produces [:feature-justification]
-   :run-tests? true
+   :after [:run-tests]
    :allowed-tools "Write,Edit,Bash"
    :commit {:message "Implementation"}
    :prompt "Now implement the feature properly, according to the implementation plan!
@@ -250,7 +252,7 @@ In your JSON response, output `pr-security-review` with your findings."}
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:testing-result]
    :allowed-tools "Write,Edit,Bash"
-   :start-app? true
+   :before [:start-app]
    :prompt "Test the implemented feature in the browser.
 
 Read the original feature description in {{next-feature}} and verify each requirement is met.
@@ -293,7 +295,7 @@ In your JSON response, output `repair-tasks` with the list of issues to fix.
    :requires [:repair-tasks :feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:repair-report]
-   :run-tests? true
+   :after [:run-tests]
    :allowed-tools "Write,Edit,Bash"
    :commit {:message "Repair fixes" :skip-if-empty :repair-tasks}
    :prompt "Review the repair tasks:
@@ -360,8 +362,8 @@ In your JSON response, output `deployment-verdict` with:
   {:id :final-review
    :requires [:deployment-verdict]
    :human-input? true
-   :start-app? true
-   :stop-app? true
+   :before [:start-app]
+   :after [:stop-app]
    :produces-pseudo [:human-ok]
    :message "Human, please visit the app in a browser, and also check the changes. Everything ok?"}
 
