@@ -195,10 +195,10 @@
   (println "Stopping app...")
   (shell "make" "stop"))
 
-(defn create-human-opinion []
+(defn create-human-opinion [editor-cmd]
   (let [path (doc-path :human-opinion)]
     (spit path "")
-    (shell "code" path)))
+    (apply shell (conj editor-cmd path))))
 
 (defn send-notification [stage-id message project-name]
   (let [send-msg "scripts/send-message.sh"
@@ -206,11 +206,11 @@
     (when (fs/exists? send-msg)
       (shell {:continue true} send-msg title message (str project-name " Builder")))))
 
-(defn wait-for-human [message {:keys [id produces]} project-name]
-  (shell "say" (str project-name " needs your attention now."))
+(defn wait-for-human [message {:keys [id produces]} project-name editor-cmd]
+  #_(shell "say" (str project-name " needs your attention now."))
   (send-notification id message project-name)
   (when (some #{:human-opinion} produces)
-    (create-human-opinion))
+    (create-human-opinion editor-cmd))
   (println message)
   (loop []
     (print "Type 'ok' to proceed: ")
@@ -275,7 +275,7 @@
     (run-shell-stage stage ctx)
 
     (when human-input?
-      (wait-for-human (interpolate (or message "Waiting for human input...") ctx) stage project-name))
+      (wait-for-human (interpolate (or message "Waiting for human input...") ctx) stage project-name (:editor-cmd ctx)))
 
     (when prompt
       (let [model (or (:model stage) (:model ctx))]
@@ -391,6 +391,9 @@
       (when-not (:model config)
         (println "Error: project-builder.edn must contain :model")
         (System/exit 1))
+      (when-not (:editor-cmd config)
+        (println "Error: project-builder.edn must contain :editor-cmd")
+        (System/exit 1))
       config)))
 
 (defn -main [& args]
@@ -413,4 +416,5 @@
                    :feature-name feature-name
                    :port port
                    :project-name project-name
-                   :model model})))
+                   :model model
+                   :editor-cmd (:editor-cmd project-config)})))
