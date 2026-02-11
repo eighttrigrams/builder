@@ -44,7 +44,9 @@
 (defn interpolate [template ctx]
   (reduce-kv
    (fn [s k v]
-     (str/replace s (str "{{" (name k) "}}") v))
+     (if (string? v)
+       (str/replace s (str "{{" (name k) "}}") v)
+       s))
    template
    (merge ctx
           {:docs-dir (docs-dir)}
