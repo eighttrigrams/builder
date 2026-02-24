@@ -98,8 +98,7 @@
   (println "Running tests...")
   (let [{:keys [exit]} (shell {:continue true} "make" "test")]
     (when (not= 0 exit)
-      (println "Unit tests failed. Aborting.")
-      (System/exit 1))))
+      (throw (ex-info "Unit tests failed" {})))))
 
 (defn cleanup-docs [doc-keys]
   (doseq [doc-key doc-keys]
@@ -262,19 +261,28 @@
           result (babashka.process/shell {:out :string :continue true} "bash" "-c" cmd)]
       (spit (doc-path shell-output) (:out result)))))
 
-(defn update-project-stage! [stage-id]
-  (let [config-file "project-builder.edn"
-        content (slurp config-file)
-        updated (str/replace content #":stage\s+\S+" (str ":stage " stage-id))]
-    (spit config-file updated)))
+(defn status-path [] (str (docs-dir) "/status.edn"))
 
-(defn run-stage [stage ctx]
+(defn read-status []
+  (let [path (status-path)]
+    (if (fs/exists? path)
+      (edn/read-string (slurp path))
+      {})))
+
+(defn write-status! [status]
+  (spit (status-path) (pr-str status)))
+
+(defn run-action! [action]
+  (case action
+    :start-app (start-app)
+    :stop-app (stop-app)
+    :run-tests (run-tests)))
+
+(defn run-stage-body [stage ctx]
   (let [{:keys [id prompt human-input? before after produces
                 commit cleanup cleanup-after git-revert? git-restore?
                 clear-next-feature? message]} stage
         {:keys [commit-message-prefix project-name]} ctx]
-    (update-project-stage! id)
-    (println "\n=== Stage:" (name id) "===")
 
     (check-requires stage)
 
@@ -285,19 +293,14 @@
       (cleanup-docs cleanup))
 
     (doseq [action before]
-      (case action
-        :start-app (start-app)
-        :stop-app (stop-app)
-        :run-tests (run-tests)))
-
-    ;; main action
+      (run-action! action))
 
     (when git-revert?
       (shell "git" "revert" "--no-edit" "HEAD"))
-    
+
     (when git-restore?
       (shell "git" "restore" "."))
-    
+
     (run-shell-stage stage ctx)
 
     (when human-input?
@@ -309,16 +312,11 @@
 
     (when commit
       (git-commit (:message commit) commit-message-prefix))
-    
-    ;; - main action
-    
-    (doseq [action after]
-      (case action
-        :start-app (start-app)
-        :stop-app (stop-app)
-        :run-tests (run-tests)))
 
-    (check-produces stage) 
+    (doseq [action after]
+      (run-action! action))
+
+    (check-produces stage)
 
     (when cleanup-after
       (cleanup-docs cleanup-after))
@@ -326,9 +324,35 @@
     (when clear-next-feature?
       (git-clear-next-feature))))
 
+(defn run-stage [stage ctx]
+  (let [{:keys [id retriable commit]} stage
+        max-attempts (if retriable 3 1)]
+    (write-status! (assoc (read-status) :stage id))
+    (println "\n=== Stage:" (name id) "===")
+    (loop [attempt 1]
+      (when (> attempt 1)
+        (write-status! (assoc (read-status) :stage id :attempt attempt))
+        (println "\n=== Stage:" (name id) "- retry" attempt "of" max-attempts "==="))
+      (let [error (try
+                    (run-stage-body stage ctx)
+                    nil
+                    (catch Exception e e))]
+        (cond
+          (nil? error) nil
+          (and retriable commit (< attempt max-attempts))
+          (do
+            (println "Stage failed:" (ex-message error) "- reverting commit and retrying...")
+            (shell "git" "revert" "--no-edit" "HEAD")
+            (recur (inc attempt)))
+          :else
+          (do
+            (println "Stage failed:" (ex-message error))
+            (System/exit 1)))))))
+
 (defn run-pipeline [ctx]
   (reset! total-cost 0.0)
   (reset! total-duration-ms 0)
+  (write-status! {:stage :start})
   (doseq [stage (:stages *config*)]
     (run-stage stage ctx))
   (let [total-secs (/ @total-duration-ms 1000.0)
@@ -430,9 +454,6 @@
       (System/exit 1))
     (when-not (and pipeline-name project-name docs-dir (:log-file project-config) (:prompts-log project-config))
       (println "Error: project-builder.edn must contain :pipeline-name, :project-name, :docs-dir, :log-file, and :prompts-log")
-      (System/exit 1))
-    (when-not (= :start (:stage project-config))
-      (println "Error: :stage in project-builder.edn must be :start")
       (System/exit 1))
     (load-config! pipeline-name)
     (alter-var-root #'*config* merge (select-keys project-config [:docs-dir :log-file :prompts-log]))

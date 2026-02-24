@@ -179,6 +179,7 @@ In your JSON response, output `boyscout-plan` and `implementation-plan`."}
    :requires [:boyscout-plan :human-opinion]
    :produces [:boyscout-report]
    :after [:run-tests]
+   :retriable true
    :allowed-tools "Write,Edit,Bash"
    :commit {:message "Preparatory refactoring"}
    :prompt "Now implement the boyscout plan!
@@ -191,6 +192,7 @@ In your JSON response, output `boyscout-report` with what you did."}
    :requires [:enriched-feature :boyscout-report :implementation-plan :human-opinion]
    :produces [:feature-justification]
    :after [:run-tests]
+   :retriable true
    :allowed-tools "Write,Edit,Bash"
    :commit {:message "Implementation"}
    :prompt "Now implement the feature properly, according to the implementation plan!
