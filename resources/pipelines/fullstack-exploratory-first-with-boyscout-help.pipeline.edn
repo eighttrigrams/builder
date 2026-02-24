@@ -165,7 +165,7 @@ For the proper implementation, then
    :before [:start-app]
    :message "Please human, add your verdict in {{human-opinion}} (note that the app is up at {{port}})"}
 
-  {:id :revert
+  {:id :restore
    :requires [:human-opinion]
    :git-restore? true}
 

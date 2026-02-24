@@ -380,7 +380,7 @@
         commit-artifacts (atom #{})
         pseudo-artifacts (atom #{})]
     (.append sb "flowchart TB\n")
-    (doseq [{:keys [id requires produces commit git-revert?
+    (doseq [{:keys [id requires produces commit
                     produces-pseudo requires-pseudo requires-commits]} stages]
       (let [stage-node (stage-id->node id)]
         (when (seq requires)
@@ -399,7 +399,7 @@
           (doseq [prod produces-pseudo]
             (swap! pseudo-artifacts conj prod)
             (.append sb (format "    %s --> %s\n" stage-node (doc-id->node prod)))))
-        (when (or commit git-revert?)
+        (when commit
           (let [commit-id (commit-artifact-id id)]
             (swap! commit-artifacts conj commit-id)
             (.append sb (format "    %s --> %s\n" stage-node (doc-id->node commit-id)))))))

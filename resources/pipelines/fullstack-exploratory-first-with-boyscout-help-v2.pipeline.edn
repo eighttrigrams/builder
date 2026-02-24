@@ -31,6 +31,8 @@ Output the resulting document as `enriched-feature` in your JSON response."}
    :requires [:enriched-feature]
    :produces [:exploratory-implementers-complaints :exploratory-justification]
    :after [:run-tests]
+   :retriable true
+   :commit {:message "Exploratory implementation"}
    :allowed-tools "Write,Edit,Bash"
    :prompt "We are building a new feature {{feature-name}}.
 
@@ -50,7 +52,7 @@ In your JSON response, output `exploratory-justification` with your explanation 
 
   {:id :capture-exploratory-diff
    :produces [:exploratory-diff]
-   :shell "git diff -U10 -- . ':!{{docs-dir}}'"
+   :shell "git diff HEAD~1 -U10 -- . ':!{{docs-dir}}'"
    :shell-output :exploratory-diff}
 
   {:id :judge
@@ -121,7 +123,7 @@ In your JSON response, output `verdict` with:
   In your JSON response, output `boyscout-observations` with your findings."}
 
   {:id :revert
-   :git-restore? true}
+   :git-revert? true}
 
   {:id :lint
    :produces [:lint-report]
