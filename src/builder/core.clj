@@ -1,5 +1,6 @@
 (ns builder.core
   (:require [clojure.edn :as edn]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.java.io :as io]
             [babashka.process :refer [shell process]]
@@ -14,6 +15,11 @@
 (defn validate-pipeline [config]
   (let [produced (atom (set (:seed-artifacts config)))]
     (doseq [{:keys [requires produces cleanup-after]} (:stages config)]
+      (when (and requires produces)
+        (let [overlap (set/intersection (set requires) (set produces))]
+          (when (seq overlap)
+            (throw (ex-info "Stage cannot produce the same artifact it requires"
+                            {:overlap overlap})))))
       (when requires
         (doseq [req requires]
           (when-not (contains? @produced req)
@@ -36,10 +42,18 @@
         (System/exit 1)))))
 
 (defn docs-dir [] (:docs-dir *config*))
-(defn documents [] (:documents *config*))
 
 (defn doc-path [doc-key]
-  (str (docs-dir) "/" (:file (get (documents) doc-key))))
+  (str (docs-dir) "/"
+       (-> (name doc-key) (str/replace "-" "_") str/upper-case)
+       ".md"))
+
+(defn all-doc-keys []
+  (->> (:stages *config*)
+       (mapcat (juxt :requires :produces :cleanup :cleanup-after))
+       flatten
+       (remove nil?)
+       distinct))
 
 (defn interpolate [template ctx]
   (reduce-kv
@@ -50,7 +64,7 @@
    template
    (merge ctx
           {:docs-dir (docs-dir)}
-          (into {} (map (fn [[k _]] [k (doc-path k)]) (documents))))))
+          (into {} (map (fn [k] [k (doc-path k)]) (all-doc-keys))))))
 
 (defn file-valid? [path]
   (and (fs/exists? path)
@@ -248,14 +262,24 @@
           result (babashka.process/shell {:out :string :continue true} "bash" "-c" cmd)]
       (spit (doc-path shell-output) (:out result)))))
 
+(defn update-project-stage! [stage-id]
+  (let [config-file "project-builder.edn"
+        content (slurp config-file)
+        updated (str/replace content #":stage\s+\S+" (str ":stage " stage-id))]
+    (spit config-file updated)))
+
 (defn run-stage [stage ctx]
-  (let [{:keys [id prompt human-input? before after
+  (let [{:keys [id prompt human-input? before after produces
                 commit cleanup cleanup-after git-revert? git-restore?
                 clear-next-feature? message]} stage
         {:keys [commit-message-prefix project-name]} ctx]
+    (update-project-stage! id)
     (println "\n=== Stage:" (name id) "===")
 
     (check-requires stage)
+
+    (when produces
+      (cleanup-docs produces))
 
     (when cleanup
       (cleanup-docs cleanup))
@@ -406,6 +430,9 @@
       (System/exit 1))
     (when-not (and pipeline-name project-name docs-dir (:log-file project-config) (:prompts-log project-config))
       (println "Error: project-builder.edn must contain :pipeline-name, :project-name, :docs-dir, :log-file, and :prompts-log")
+      (System/exit 1))
+    (when-not (= :start (:stage project-config))
+      (println "Error: :stage in project-builder.edn must be :start")
       (System/exit 1))
     (load-config! pipeline-name)
     (alter-var-root #'*config* merge (select-keys project-config [:docs-dir :log-file :prompts-log]))

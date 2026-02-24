@@ -41,3 +41,18 @@
                       {:id :stage-2 :cleanup-after [:spec]}
                       {:id :stage-3 :produces [:spec]}
                       {:id :stage-4 :requires [:spec]}]})))))
+
+(deftest stage-cannot-produce-what-it-requires
+  (testing "invalid: stage produces same artifact it requires"
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"Stage cannot produce the same artifact it requires"
+         (core/validate-pipeline
+          {:seed-artifacts [:spec]
+           :stages [{:id :stage-1 :requires [:spec] :produces [:spec]}]}))))
+
+  (testing "valid: stage requires one artifact and produces another"
+    (is (= true
+           (core/validate-pipeline
+            {:seed-artifacts [:spec]
+             :stages [{:id :stage-1 :requires [:spec] :produces [:enriched-spec]}]})))))

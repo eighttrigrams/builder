@@ -2,26 +2,10 @@
 
  :seed-artifacts [:next-feature]
 
- :documents
- {:next-feature                    {:file "NEXT_FEATURE.md"}
-  :exploratory-implementers-complaints {:file "EXPLORATORY_IMPLEMENTERS_COMPLAINTS.md"}
-  :exploratory-justification       {:file "EXPLORATORY_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
-  :exploratory-diff                {:file "EXPLORATORY_DIFF.txt"}
-  :pr-architecture-review          {:file "PR_ARCHITECTURE_REVIEW_RESULT.md"}
-  :pr-data-consistency-review      {:file "PR_DATA_CONSISTENCY_REVIEW_RESULT.md"}
-  :pr-security-review              {:file "PR_SECURITY_REVIEW_RESULT.md"}
-  :boyscout-observations           {:file "BOYSCOUT_OBSERVATIONS.md"}
-  :boyscout-plan                   {:file "BOYSCOUT_PLAN.md"}
-  :implementation-plan             {:file "IMPLEMENTATION_PLAN.md"}
-  :human-opinion                   {:file "HUMAN_OPINION.md"}
-  :boyscout-report                 {:file "BOYSCOUT_REPORT.md"}
-  :feature-justification           {:file "FEATURE_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
-}
-
  :stages
  [{:id :enrich-feature
    :requires [:next-feature]
-   :produces [:next-feature]
+   :produces [:enriched-feature]
    :json-output? true
    :prompt "Read the feature description carefully.
 
@@ -42,10 +26,10 @@ Since this feature is small, use the saved cycles to give the boyscout extra roo
 
 If the feature is NOT small (medium or large), use the original content unchanged.
 
-Output the resulting document as `next-feature` in your JSON response."}
+Output the resulting document as `enriched-feature` in your JSON response."}
 
   {:id :exploratory-implementation
-   :requires [:next-feature]
+   :requires [:enriched-feature]
    :produces [:exploratory-implementers-complaints :exploratory-justification]
    :after [:run-tests]
    :json-output? true
@@ -133,7 +117,7 @@ Write findings to {{pr-security-review}}."}
 
   {:id :planning
    :requires [:exploratory-implementers-complaints
-              :next-feature
+              :enriched-feature
               :exploratory-justification
               :exploratory-diff
               :pr-architecture-review
@@ -197,7 +181,7 @@ Make sure tests run (`make test`)
 Report what you did in {{boyscout-report}}"}
 
   {:id :implementation
-   :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
+   :requires [:enriched-feature :boyscout-report :implementation-plan :human-opinion]
    :produces [:feature-justification]
    :after [:run-tests]
    :json-output? true
@@ -222,5 +206,5 @@ In your JSON response, output `feature-justification` with what you did and why.
   {:id :finalize
    :requires-pseudo [:human-ok]
    :clear-next-feature? true
-   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
+   :cleanup-after [:enriched-feature :boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
                    :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :feature-justification]}]}

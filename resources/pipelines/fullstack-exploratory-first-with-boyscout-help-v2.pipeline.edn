@@ -2,33 +2,10 @@
 
  :seed-artifacts [:next-feature]
 
- :documents
- {:next-feature                    {:file "NEXT_FEATURE.md"}
-  :exploratory-implementers-complaints {:file "EXPLORATORY_IMPLEMENTERS_COMPLAINTS.md"}
-  :exploratory-justification       {:file "EXPLORATORY_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
-  :exploratory-diff                {:file "EXPLORATORY_DIFF.txt"}
-  :verdict                         {:file "VERDICT.md"}
-  :deployment-verdict              {:file "DEPLOYMENT_VERDICT.md"}
-  :final-diff                      {:file "FINAL_DIFF.txt"}
-  :testing-result                  {:file "TESTING_RESULT.md"}
-  :pr-architecture-review          {:file "PR_ARCHITECTURE_REVIEW_RESULT.md"}
-  :pr-data-consistency-review      {:file "PR_DATA_CONSISTENCY_REVIEW_RESULT.md"}
-  :pr-security-review              {:file "PR_SECURITY_REVIEW_RESULT.md"}
-  :boyscout-observations           {:file "BOYSCOUT_OBSERVATIONS.md"}
-  :boyscout-plan                   {:file "BOYSCOUT_PLAN.md"}
-  :implementation-plan             {:file "IMPLEMENTATION_PLAN.md"}
-  :human-opinion                   {:file "HUMAN_OPINION.md"}
-  :boyscout-report                 {:file "BOYSCOUT_REPORT.md"}
-  :feature-justification           {:file "FEATURE_IMPLEMENTATION_DECISIONS_JUSTIFICATION.md"}
-  :repair-tasks                    {:file "REPAIR_TASKS.md"}
-  :repair-report                   {:file "REPAIR_REPORT.md"}
-  :repair-verdict                  {:file "REPAIR_VERDICT.md"}
-  :lint-report                     {:file "LINT_REPORT.txt"}}
-
  :stages
  [{:id :enrich-feature
    :requires [:next-feature]
-   :produces [:next-feature]
+   :produces [:enriched-feature]
    :prompt "Read the feature description carefully.
 
 Assess whether this is a **small feature** - meaning it would likely:
@@ -48,10 +25,10 @@ Since this feature is small, use the saved cycles to give the boyscout extra roo
 
 If the feature is NOT small (medium or large), use the original content unchanged.
 
-Output the resulting document as `next-feature` in your JSON response."}
+Output the resulting document as `enriched-feature` in your JSON response."}
 
   {:id :exploratory-implementation
-   :requires [:next-feature]
+   :requires [:enriched-feature]
    :produces [:exploratory-implementers-complaints :exploratory-justification]
    :after [:run-tests]
    :allowed-tools "Write,Edit,Bash"
@@ -77,13 +54,13 @@ In your JSON response, output `exploratory-justification` with your explanation 
    :shell-output :exploratory-diff}
 
   {:id :judge
-   :requires [:next-feature :exploratory-justification :exploratory-diff]
+   :requires [:enriched-feature :exploratory-justification :exploratory-diff]
    :produces [:verdict]
    :before [:start-app]
    :after [:stop-app]
    :allowed-tools "Write,Edit,Bash"
    :prompt "You are the judge. Review:
-- The feature requirements in {{next-feature}}
+- The feature requirements in {{enriched-feature}}
 - The justification in {{exploratory-justification}}
 - The diff in {{exploratory-diff}}
 
@@ -153,7 +130,7 @@ In your JSON response, output `verdict` with:
 
   {:id :planning
    :requires [:exploratory-implementers-complaints
-              :next-feature
+              :enriched-feature
               :exploratory-diff
               :verdict
               :human-opinion
@@ -211,7 +188,7 @@ Make sure tests run (`make test`)
 In your JSON response, output `boyscout-report` with what you did."}
 
   {:id :implementation
-   :requires [:next-feature :boyscout-report :implementation-plan :human-opinion]
+   :requires [:enriched-feature :boyscout-report :implementation-plan :human-opinion]
    :produces [:feature-justification]
    :after [:run-tests]
    :allowed-tools "Write,Edit,Bash"
@@ -248,14 +225,14 @@ In your JSON response, output `pr-data-consistency-review` with your findings."}
 In your JSON response, output `pr-security-review` with your findings."}
 
   {:id :manual-testing
-   :requires [:next-feature :feature-justification]
+   :requires [:enriched-feature :feature-justification]
    :requires-commits [:boyscout-refactoring :implementation]
    :produces [:testing-result]
    :allowed-tools "Write,Edit,Bash"
    :before [:start-app]
    :prompt "Test the implemented feature in the browser.
 
-Read the original feature description in {{next-feature}} and verify each requirement is met.
+Read the original feature description in {{enriched-feature}} and verify each requirement is met.
 
 Use the UI skill to interact with the application in the browser via playwright and take screenshots as evidence.
 
@@ -334,11 +311,11 @@ In your JSON response, output `repair-verdict` with:
    :shell-output :final-diff}
 
   {:id :final-judge
-   :requires [:next-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff :testing-result :repair-tasks :repair-report :repair-verdict]
+   :requires [:enriched-feature :feature-justification :pr-architecture-review :pr-data-consistency-review :pr-security-review :human-opinion :final-diff :testing-result :repair-tasks :repair-report :repair-verdict]
    :produces [:deployment-verdict]
    :allowed-tools "Write,Edit,Bash"
    :prompt "You are the final judge. Review:
-- The original feature request in {{next-feature}}
+- The original feature request in {{enriched-feature}}
 - The human's earlier opinion in {{human-opinion}}
 - What was implemented in {{feature-justification}}
 - The actual code changes in {{final-diff}}
@@ -370,6 +347,6 @@ In your JSON response, output `deployment-verdict` with:
   {:id :finalize
    :requires-pseudo [:human-ok]
    :clear-next-feature? true
-   :cleanup-after [:boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
+   :cleanup-after [:enriched-feature :boyscout-report :implementation-plan :human-opinion :exploratory-implementers-complaints :exploratory-justification :exploratory-diff
                    :pr-architecture-review :pr-data-consistency-review :pr-security-review :boyscout-observations :boyscout-plan :verdict :deployment-verdict :final-diff :testing-result
                    :repair-tasks :repair-report :repair-verdict :lint-report :feature-justification]}]}
