@@ -1,6 +1,7 @@
 # builder
 
 A pipeline runner for Claude-based build automation.
+Described here https://eighttrigrams.substack.com/p/running-in-circles
 
 ## Getting started
 
