@@ -2,7 +2,7 @@
 
 A pipeline runner for Claude-based build automation.
 
-Described here https://eighttrigrams.substack.com/p/running-in-circles
+Described here https://eighttrigrams.net/article/28/version/1
 
 ## Getting started
 
